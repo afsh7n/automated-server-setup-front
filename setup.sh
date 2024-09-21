@@ -112,6 +112,57 @@ for project_name in "${!project_folders[@]}"; do
     fi
 done
 
+for project_name in "${!project_folders[@]}"; do
+    folder_name=${project_folders[$project_name]}
+    folder_path="$src_directory/$folder_name"
+
+    # Clone the repository
+    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
+    git clone $repo_url $folder_path
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
+
+        # Check if Dockerfile exists, if not, create it
+        if [ ! -f "$folder_path/Dockerfile" ]; then
+            echo -e "${RED}No Dockerfile found for $project_name. Adding a default Dockerfile...${NC}"
+
+            if [ "$project_name" == "onomis-react" ]; then
+                # Add React Dockerfile
+                cat <<EOL > "$folder_path/Dockerfile"
+# Dockerfile for React Project
+FROM node:16-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+RUN npm install -g serve
+EXPOSE 3000
+CMD ["serve", "-s", "build"]
+EOL
+            elif [ "$project_name" == "onomis-vue" ]; then
+                # Add Vue Dockerfile
+                cat <<EOL > "$folder_path/Dockerfile"
+# Dockerfile for Vue Project
+FROM node:16-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+RUN npm install -g serve
+EXPOSE 8080
+CMD ["serve", "-s", "dist"]
+EOL
+            fi
+        fi
+    else
+        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
+        exit 1
+    fi
+done
+
+
 # Step 5: Install Docker (if needed)
 if command -v docker &>/dev/null; then
     echo -e "${GREEN}Docker is already installed. Skipping Docker installation.${NC}"
