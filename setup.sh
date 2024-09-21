@@ -33,16 +33,24 @@ else
 fi
 
 # Step 3: Generate SSH key for deploy_user and root (if needed)
-if [ -f "/home/$deploy_user/.ssh/id_rsa" ]; then
+if [ -f "/home/$deploy_user/.ssh/id_rsa.pub" ]; then
     echo -e "${GREEN}SSH key for '$deploy_user' already exists. Skipping SSH key generation.${NC}"
 else
     # Ensure the .ssh directory exists and has the correct permissions
     echo -e "${BLUE}Creating .ssh directory for $deploy_user...${NC}"
-    sudo -u $deploy_user mkdir -p /home/$deploy_user/.ssh
+    sudo mkdir -p /home/$deploy_user/.ssh
+    sudo chown $deploy_user:$deploy_user /home/$deploy_user/.ssh
     sudo chmod 700 /home/$deploy_user/.ssh
 
+    # Generate SSH key for the deploy user
     echo -e "${BLUE}Generating SSH key for $deploy_user...${NC}"
     sudo -u $deploy_user ssh-keygen -t rsa -b 4096 -C "exp@exp.com" -N "" -f /home/$deploy_user/.ssh/id_rsa
+
+    # Ensure the permissions for the keys are correct
+    sudo chmod 600 /home/$deploy_user/.ssh/id_rsa
+    sudo chmod 644 /home/$deploy_user/.ssh/id_rsa.pub
+    sudo chown $deploy_user:$deploy_user /home/$deploy_user/.ssh/id_rsa
+    sudo chown $deploy_user:$deploy_user /home/$deploy_user/.ssh/id_rsa.pub
 
     echo -e "${BLUE}Here is the SSH public key. Please add it to your GitLab account:${NC}"
     cat /home/$deploy_user/.ssh/id_rsa.pub
