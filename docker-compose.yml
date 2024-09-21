@@ -1,37 +1,29 @@
-version: '3'
+version: '3.8'
 
 services:
   nginx:
     image: nginx:alpine
-    container_name: nginx-container
-    ports:
-      - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./src/landing-page-html:/usr/share/nginx/html/landing-page
-      - ./src/main-page-html:/usr/share/nginx/html/main-page
-      - react-app:/usr/share/nginx/html/react-app
-      - vue-app:/usr/share/nginx/html/vue-app
+      - ./src:/usr/share/nginx/html
+    ports:
+      - "80:80"
     depends_on:
-      - react-app
-      - vue-app
+      - onomis_react
+      - onomis_vue
 
-  react-app:
-    build:
-      context: ./src/react-app
-    container_name: react-app-container
-    ports:
+  onomis_react:
+    image: nginx:alpine
+    container_name: onomis_react
+    volumes:
+      - ./src/onomis-react:/usr/share/nginx/html
+    expose:
       - "3000:3000"
-    command: npm start
 
-  vue-app:
-    build:
-      context: ./src/vue-app
-    container_name: vue-app-container
-    ports:
+  onomis_vue:
+    image: nginx:alpine
+    container_name: onomis_vue
+    volumes:
+      - ./src/onomis-vue:/usr/share/nginx/html
+    expose:
       - "8080:8080"
-    command: npm run serve
-
-volumes:
-  react-app:
-  vue-app:
