@@ -78,25 +78,33 @@ for project_name in "${!project_folders[@]}"; do
 
     read -p "Please enter your GitLab repository URL for $project_name: " repo_url
 
-    # Check if the folder already exists; if not, create it
+    # Check if the folder already exists and is not empty
+    if [ -d "$folder_path" ] && [ "$(ls -A $folder_path)" ]; then
+        echo -e "${RED}The folder $folder_path already exists and is not empty.${NC}"
+        read -p "Do you want to delete the existing folder and continue? (y/n): " confirm
+        if [ "$confirm" = "y" ]; then
+            echo -e "${BLUE}Removing existing folder $folder_path...${NC}"
+            sudo rm -rf $folder_path
+        else
+            echo -e "${RED}Skipping cloning of $project_name.${NC}"
+            continue
+        fi
+    fi
+
+    # Create folder if it doesn't exist
     if [ ! -d "$folder_path" ]; then
         echo -e "${BLUE}Creating folder $folder_name...${NC}"
         mkdir -p $folder_path
     fi
 
-    # Check if the repository already exists
-    if [ -d "$folder_path/.git" ]; then
-        echo -e "${GREEN}Repository already exists in $folder_path. Pulling latest changes...${NC}"
-        cd $folder_path && git pull
+    # Clone the repository
+    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
+    git clone $repo_url $folder_path
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
     else
-        echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
-        git clone $repo_url $folder_path
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
-        else
-            echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
-            exit 1
-        fi
+        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
+        exit 1
     fi
 done
 
