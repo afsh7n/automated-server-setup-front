@@ -1,101 +1,90 @@
 
-# Multi-Project Setup with Docker (HTML, React, Vue)
+# Automated Server Setup Script
 
-This repository contains a setup for managing multiple front-end projects (HTML, React, and Vue) using Docker. Each project is stored in a separate directory under the `src/` folder and served through Nginx with Docker Compose.
+This script (`setup.sh`) is designed to automate the setup of a server environment for deploying web applications using Docker, Docker Compose, and GitLab Runner. It handles tasks like creating users, generating SSH keys, cloning project repositories, setting up Docker, and configuring GitLab Runner.
 
-## Project Structure
+## Features
+
+- Creates a deploy user if not already created.
+- Generates SSH keys for the deploy user and root (if needed).
+- Clones multiple project repositories into specified directories.
+- Installs Docker and Docker Compose.
+- Configures GitLab Runner for CI/CD pipelines.
+- Changes the SSH port to 23232 for increased security.
+- Automatically starts Docker Compose to run the applications.
+
+## Prerequisites
+
+- A Linux-based server with sudo privileges.
+- Access to GitLab repositories (SSH keys will be generated for authentication).
+- Docker and Docker Compose should be installed (the script handles this if not already installed).
+- GitLab Runner registration token (required during script execution).
+
+## Directory Structure
+
+Once the script is run, it will set up the following directory structure under `/home/deployer/automated-server-setup-front/`:
 
 ```
-project-root/
-│
-├── src/
-│   ├── landing-page-html/
-│   │   └── index.html
-│   ├── main-page-html/
-│   │   └── index.html
-│   ├── react-app/
-│   │   └── # React project files
-│   └── vue-app/
-│       └── # Vue project files
-├── docker-compose.yml
-└── nginx.conf
+/home/deployer/automated-server-setup-front
+└── src
+    ├── onomis-react
+    ├── onomis-vue
+    ├── onomis-landing
+    └── emeax-landing
 ```
 
-- **landing-page-html**: Contains the HTML landing page.
-- **main-page-html**: Contains the main HTML page.
-- **react-app**: Contains the React project.
-- **vue-app**: Contains the Vue project.
+Each of the above folders corresponds to a specific project (React, Vue, and HTML landing pages).
 
-## What It Does
+## Usage
 
-This setup uses Docker and Docker Compose to serve multiple projects:
-- Two static HTML pages served via Nginx.
-- A React project served on `/react`.
-- A Vue project served on `/vue`.
+1. **Download and Run the Script**
 
-Nginx acts as a reverse proxy, routing traffic to each project based on the URL path.
+   To run the script, use the following command:
 
-## How to Set Up
-
-1. Clone the repository:
    ```bash
-   git clone <your-repo-url>
-   cd <your-repo-folder>
+   bash <(curl -Ls https://raw.githubusercontent.com/afsh7n/automated-server-setup-front/main/init/setup.sh)
    ```
 
-2. Build and start the Docker containers:
-   ```bash
-   docker-compose up -d --build
-   ```
+2. **Enter Deployment Details**
 
-3. Access the applications:
-   - HTML Landing Page: `http://localhost/landing-page`
-   - HTML Main Page: `http://localhost/main-page`
-   - React Project: `http://localhost/react`
-   - Vue Project: `http://localhost/vue`
+   The script will prompt you for the following information:
+   - Deploy username (default: `deployer`).
+   - GitLab repository URLs for the projects (React, Vue, HTML landing pages).
+   - GitLab Runner registration token (required to configure CI/CD).
+
+3. **Accessing Applications**
+
+   After the script completes, you can access the applications using the following routes:
+   - **Onomis React**: `http://your-domain/preview/onomis-react`
+   - **Onomis Vue**: `http://your-domain/preview/onomis-vue`
+   - **Onomis Landing**: `http://your-domain/onomis`
+   - **Emeax Landing**: `http://your-domain/`
+
+## Steps Executed by the Script
+
+1. **User Creation**: Creates a deploy user (`deployer`) and adds them to the sudo group.
+2. **SSH Key Generation**: Generates SSH keys for secure GitLab access.
+3. **Repository Cloning**: Clones the following projects into `/home/deployer/automated-server-setup-front/src/`:
+   - `onomis-react`
+   - `onomis-vue`
+   - `onomis-landing`
+   - `emeax-landing`
+4. **Docker Installation**: Installs Docker and Docker Compose (if not already installed).
+5. **GitLab Runner Configuration**: Installs GitLab Runner, registers it using the provided token, and sets it up as a service.
+6. **SSH Port Change**: Changes the SSH port from the default (22) to 23232 for enhanced security.
+7. **Docker Compose Execution**: Starts all services using Docker Compose (`docker-compose up -d --build`).
+
+## Notes
+
+- **SSH Keys**: After running the script, you will need to add the generated SSH key to your GitLab account to allow the script to clone private repositories.
+- **Firewall**: Ensure that the firewall rules allow traffic on the SSH port (23232) and HTTP/HTTPS ports (80/443).
 
 ## Troubleshooting
 
-### React Project: Blank Page Issue
-If the React project shows a blank page, ensure that the `homepage` property in the `package.json` is set to `/react`:
-```json
-"homepage": "/react"
-```
+- If you encounter a 404 error when accessing the applications, make sure the Nginx configuration and the file structure inside the `src` folder are correct.
+- Use the command `docker logs <nginx-container-id>` to view logs and troubleshoot any issues with Nginx or Docker.
+- If the GitLab Runner fails to start, check the registration token and ensure the service is running using `sudo systemctl status gitlab-runner`.
 
-### Vue Project: 502 Bad Gateway or Invalid Host Header
-For the Vue project, if you encounter an `Invalid Host Header` or `502 Bad Gateway`, ensure the following settings in `vue.config.js`:
+## License
 
-```javascript
-module.exports = {
-  publicPath: '/vue/',  // Set the base path for the Vue app
-  devServer: {
-    host: '0.0.0.0',
-    port: 8080,
-    allowedHosts: 'all',
-    client: {
-      webSocketURL: 'auto://0.0.0.0:8080/ws',
-    },
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-    }
-  }
-}
-```
-
-Ensure that Nginx is correctly configured to proxy requests to the Vue container in `nginx.conf`:
-
-```nginx
-location /vue/ {
-  proxy_pass http://vue-app-container:8080;
-  proxy_set_header Host $host;
-  proxy_set_header X-Real-IP $remote_addr;
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
-## Conclusion
-
-This setup provides a clean and simple way to manage multiple front-end projects using Docker. With Nginx as a reverse proxy and Docker Compose to manage the services, you can easily scale and maintain the projects.
-
-Feel free to contribute or report any issues!
+This script is open-source and available under the MIT License.
