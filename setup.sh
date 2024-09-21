@@ -13,7 +13,11 @@ project_directory="/home/deployer/automated-server-setup-front"
 echo -e "${BLUE}Cloning project structure into $project_directory...${NC}"
 if [ -d "$project_directory" ]; then
     echo -e "${GREEN}Project structure already exists. Pulling the latest changes.${NC}"
-    cd $project_directory && git pull
+
+    # Adding the directory to Git's safe.directory list
+    sudo -u $deploy_user git config --global --add safe.directory $project_directory
+
+    cd $project_directory && sudo -u $deploy_user git pull
 else
     git clone $project_structure_url $project_directory
     cd $project_directory
