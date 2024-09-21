@@ -42,7 +42,7 @@ Each of the above folders corresponds to a specific project (React, Vue, and HTM
    To run the script, use the following command:
 
    ```bash
-   bash <(curl -Ls https://raw.githubusercontent.com/afsh7n/automated-server-setup-front/main/init/setup.sh)
+   bash <(curl -Ls https://raw.githubusercontent.com/afsh7n/automated-server-setup-front/main/setup.sh)
    ```
 
 2. **Enter Deployment Details**

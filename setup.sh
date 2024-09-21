@@ -36,8 +36,14 @@ fi
 if [ -f "/home/$deploy_user/.ssh/id_rsa" ]; then
     echo -e "${GREEN}SSH key for '$deploy_user' already exists. Skipping SSH key generation.${NC}"
 else
+    # Ensure the .ssh directory exists and has the correct permissions
+    echo -e "${BLUE}Creating .ssh directory for $deploy_user...${NC}"
+    sudo -u $deploy_user mkdir -p /home/$deploy_user/.ssh
+    sudo chmod 700 /home/$deploy_user/.ssh
+
     echo -e "${BLUE}Generating SSH key for $deploy_user...${NC}"
     sudo -u $deploy_user ssh-keygen -t rsa -b 4096 -C "exp@exp.com" -N "" -f /home/$deploy_user/.ssh/id_rsa
+
     echo -e "${BLUE}Here is the SSH public key. Please add it to your GitLab account:${NC}"
     cat /home/$deploy_user/.ssh/id_rsa.pub
 fi
