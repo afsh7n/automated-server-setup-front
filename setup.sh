@@ -66,6 +66,7 @@ declare -A project_folders=(
     ["onomis-vue"]="onomis-vue"
     ["onomis-landing"]="onomis"
     ["emeax-landing"]="emeax"
+    ["onomis-docs"]="onomis-docs"
 )
 
 src_directory="/home/$deploy_user/automated-server-setup-front/src"
@@ -106,24 +107,9 @@ for project_name in "${!project_folders[@]}"; do
     git clone $repo_url $folder_path
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
-    else
-        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
-        exit 1
-    fi
-done
-
-for project_name in "${!project_folders[@]}"; do
-    folder_name=${project_folders[$project_name]}
-    folder_path="$src_directory/$folder_name"
-
-    # Clone the repository
-    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
-    git clone $repo_url $folder_path
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
 
         # Check if Dockerfile exists, if not, create it
-        if [ ! -f "$folder_path/Dockerfile" ]; then
+        if [ ! -f "$folder_path/Dockerfile" ] && ([[ "$project_name" == "onomis-react" ]] || [[ "$project_name" == "onomis-vue" ]]); then
             echo -e "${RED}No Dockerfile found for $project_name. Adding a default Dockerfile...${NC}"
 
             if [ "$project_name" == "onomis-react" ]; then
