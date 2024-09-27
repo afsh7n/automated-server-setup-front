@@ -19,9 +19,7 @@ services:
       dockerfile: docker/Dockerfile.react
     container_name: onomis_react
     expose:
-      - "3000"
-    ports:
-      - "3000:3000"
+      - "80"
 
   onomis_vue:
     build:
@@ -29,9 +27,7 @@ services:
       dockerfile: docker/Dockerfile.vue
     container_name: onomis_vue
     expose:
-      - "8080"
-    ports:
-      - "8080:8080"
+      - "80"
 
   onomis_docs:
     build:
