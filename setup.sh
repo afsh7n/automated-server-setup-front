@@ -81,6 +81,11 @@ if [ ! -d "$src_directory" ]; then
     mkdir -p $src_directory
 fi
 
+# Add GitLab to known_hosts to avoid manual confirmation
+echo -e "${BLUE}Adding GitLab to known_hosts...${NC}"
+ssh-keyscan gitlab.com >> /home/$deploy_user/.ssh/known_hosts
+sudo chown $deploy_user:$deploy_user /home/$deploy_user/.ssh/known_hosts
+
 for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     folder_path="$src_directory/$folder_name"
@@ -145,6 +150,7 @@ EOL
         exit 1
     fi
 done
+
 
 
 
