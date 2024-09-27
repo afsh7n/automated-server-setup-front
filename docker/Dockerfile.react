@@ -3,12 +3,16 @@ FROM node:16-alpine
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY ./../src/onomis-react/package*.json ./
+
 RUN npm install
 
-COPY . .
+COPY ./../src/onomis-react/. ./
+
 RUN npm run build
 
 RUN npm install -g serve
+
 EXPOSE 3000
-CMD ["serve", "-s", "build"]
+
+CMD ["serve", "-s", "dist"]
