@@ -87,21 +87,14 @@ for project_name in "${!project_folders[@]}"; do
 
     read -p "Please enter your GitLab repository URL for $project_name: " repo_url
 
-    # Check if the folder already exists and is not empty
-    if [ -d "$folder_path" ] && [ "$(ls -A $folder_path)" ]; then
-        echo -e "${RED}The folder $folder_path already exists and is not empty.${NC}"
-        read -p "Do you want to delete the existing folder and continue? (y/n): " confirm
-        if [ "$confirm" = "y" ]; then
-            echo -e "${BLUE}Removing existing folder $folder_path...${NC}"
-            sudo rm -rf $folder_path
-            echo -e "${GREEN}Folder removed successfully. Proceeding with clone.${NC}"
-        else
-            echo -e "${RED}Skipping cloning of $project_name.${NC}"
-            continue
-        fi
+    # Remove folder if it already exists (no confirmation needed)
+    if [ -d "$folder_path" ]; then
+        echo -e "${BLUE}Removing existing folder $folder_path...${NC}"
+        sudo rm -rf $folder_path
+        echo -e "${GREEN}Folder removed successfully.${NC}"
     fi
 
-    # Create folder if it doesn't exist
+    # Create folder after removal
     if [ ! -d "$folder_path" ]; then
         echo -e "${BLUE}Creating folder $folder_name...${NC}"
         mkdir -p $folder_path
@@ -152,6 +145,7 @@ EOL
         exit 1
     fi
 done
+
 
 
 # Step 5: Install Docker (if needed)
