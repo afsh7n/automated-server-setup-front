@@ -112,7 +112,7 @@ for project_name in "${!project_folders[@]}"; do
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
 
-        # Check if Dockerfile exists, if not, create it
+        # Check if Dockerfile exists, if not, create it for React and Vue projects
         if [ ! -f "$folder_path/Dockerfile" ] && ([[ "$project_name" == "onomis-react" ]] || [[ "$project_name" == "onomis-vue" ]]); then
             echo -e "${RED}No Dockerfile found for $project_name. Adding a default Dockerfile...${NC}"
 
