@@ -94,6 +94,7 @@ for project_name in "${!project_folders[@]}"; do
         if [ "$confirm" = "y" ]; then
             echo -e "${BLUE}Removing existing folder $folder_path...${NC}"
             sudo rm -rf $folder_path
+            echo -e "${GREEN}Folder removed successfully. Proceeding with clone.${NC}"
         else
             echo -e "${RED}Skipping cloning of $project_name.${NC}"
             continue
