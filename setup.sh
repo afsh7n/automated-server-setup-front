@@ -58,6 +58,10 @@ else
     cat /home/$deploy_user/.ssh/id_rsa.pub
 fi
 
+echo -e "${BLUE}Starting SSH agent and adding the key...${NC}"
+eval $(ssh-agent -s)
+ssh-add /home/$deploy_user/.ssh/id_rsa
+
 read -p "Press enter after you've added the SSH key to GitLab..."
 
 # Step 4: Clone repositories into respective folders
