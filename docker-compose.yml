@@ -46,6 +46,6 @@ services:
     volumes:
       - ./src/onomis-docs:/usr/src/app
     expose:
-      - "3000"
+      - "3001"
     command: >
       sh -c "npm install && npm run docs:build"
