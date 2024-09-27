@@ -111,8 +111,27 @@ for project_name in "${!project_folders[@]}"; do
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
 
-        # Check if Dockerfile exists, if not, create it for React and Vue projects
-        if [ ! -f "$folder_path/Dockerfile" ] && ([[ "$project_name" == "onomis-react" ]] || [[ "$project_name" == "onomis-vue" ]]); then
+        # Check if vite.config.js exists, and add base configuration
+        vite_config_path="$folder_path/vite.config.js"
+        if [ -f "$vite_config_path" ]; then
+            echo -e "${BLUE}Adding base configuration to $vite_config_path...${NC}"
+            # Add the base line dynamically based on the project name
+            if [[ "$project_name" == "onomis-react" ]]; then
+                base_line="base: '/preview/onomis-react/',"
+            elif [[ "$project_name" == "onomis-vue" ]]; then
+                base_line="base: '/preview/onomis-vue/',"
+            fi
+
+            # Insert the base line after 'defineConfig({'
+            sed -i "/defineConfig({/a \  $base_line" "$vite_config_path"
+
+            echo -e "${GREEN}Base configuration added successfully to $vite_config_path.${NC}"
+        else
+            echo -e "${RED}vite.config.js not found for $project_name. Skipping base configuration.${NC}"
+        fi
+
+        # Check if Dockerfile exists, if not, create it for React, Vue, and Docs projects
+        if [ ! -f "$folder_path/Dockerfile" ] && ([[ "$project_name" == "onomis-react" ]] || [[ "$project_name" == "onomis-vue" ]] || [[ "$project_name" == "onomis-docs" ]]); then
             echo -e "${RED}No Dockerfile found for $project_name. Adding a default Dockerfile...${NC}"
 
             if [ "$project_name" == "onomis-react" ]; then
@@ -127,8 +146,9 @@ COPY . .
 RUN npm run build
 RUN npm install -g serve
 EXPOSE 3000
-CMD ["serve", "-s", "build"]
+CMD ["serve", "-s", "dist"]
 EOL
+
             elif [ "$project_name" == "onomis-vue" ]; then
                 # Add Vue Dockerfile
                 cat <<EOL > "$folder_path/Dockerfile"
@@ -143,13 +163,28 @@ RUN npm install -g serve
 EXPOSE 8080
 CMD ["serve", "-s", "dist"]
 EOL
+
+            elif [ "$project_name" == "onomis-docs" ]; then
+                # Add Docs Dockerfile
+                cat <<EOL > "$folder_path/Dockerfile"
+# Dockerfile for Onomis Docs Project
+FROM node:16-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "run", "docs:build"]
+EOL
             fi
         fi
+
     else
         echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
         exit 1
     fi
 done
+
 
 
 

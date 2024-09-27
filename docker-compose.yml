@@ -11,6 +11,7 @@ services:
     depends_on:
       - onomis_react
       - onomis_vue
+      - onomis_docs
 
   onomis_react:
     image: node:16-alpine
@@ -37,3 +38,14 @@ services:
       sh -c "npm install && npm run build && npm install -g serve && serve -s dist"
     expose:
       - "8080"
+
+  onomis_docs:
+    image: node:16-alpine
+    container_name: onomis_docs
+    working_dir: /usr/src/app
+    volumes:
+      - ./src/onomis-docs:/usr/src/app
+    expose:
+      - "3000"
+    command: >
+      sh -c "npm install && npm run docs:build"
