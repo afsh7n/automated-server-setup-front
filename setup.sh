@@ -173,8 +173,10 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install
 COPY . .
-EXPOSE 3001
-CMD ["npm", "run", "docs:build"]
+RUN npm run docs:build
+RUN npm install -g serve
+EXPOSE 3000
+CMD ["serve", "-s", ".vitepress/dist"]
 EOL
             fi
         fi
