@@ -1,8 +1,14 @@
 # Dockerfile for Vue Project
-FROM node:16-alpine
+FROM node:16-alpine AS builder
 
 WORKDIR /usr/src/app
+
 COPY ./../src/onomis-vue/package*.json ./
+
 RUN npm install
-COPY ./../src/onomis-vue/. .
+
+COPY ./../src/onomis-vue/. ./
+
 RUN npm run build
+
+# Final stage - no need to expose ports or run serve, just build files for Nginx
