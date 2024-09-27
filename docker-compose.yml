@@ -19,24 +19,23 @@ services:
       context: .
       dockerfile: docker/Dockerfile.react
     volumes:
-      - ./src/onomis-react/dist:/usr/share/nginx/html/onomis-react
-    expose:
-      - "3000"
+      - onomis-react-build:/usr/share/nginx/html/onomis-react
 
   onomis_vue:
     build:
       context: .
       dockerfile: docker/Dockerfile.vue
     volumes:
-      - ./src/onomis-vue/dist:/usr/share/nginx/html/onomis-vue
-    expose:
-      - "8080"
+      - onomis-vue-build:/usr/share/nginx/html/onomis-vue
 
   onomis_docs:
     build:
       context: .
       dockerfile: docker/Dockerfile.docs
     volumes:
-      - ./src/onomis-docs/.vitepress/dist:/usr/share/nginx/html/onomis-docs
-    expose:
-      - "3001"
+      - onomis-docs-build:/usr/share/nginx/html/onomis-docs
+
+volumes:
+  onomis-react-build:
+  onomis-vue-build:
+  onomis-docs-build:

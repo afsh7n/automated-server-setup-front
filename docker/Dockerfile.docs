@@ -1,19 +1,14 @@
 # Dockerfile for Onomis Docs Project
-FROM node:16-alpine
+FROM node:16-alpine AS builder
 
 WORKDIR /usr/src/app
 
-# Install dependencies and serve globally
+# Install dependencies and build the project
 COPY ./../src/onomis-docs/package*.json ./
 RUN npm install
-RUN npm install -g serve
-
-# Copy application source code
-COPY ./../src/onomis-docs/. ./
-
-# Build the Docs project
+COPY ./../src/onomis-docs ./
 RUN npm run docs:build
 
-# Expose port and start the server
-EXPOSE 3001
-CMD ["serve", "-s", ".vitepress/dist"]
+# Final stage: Copy build files to a dedicated directory in Nginx
+FROM nginx:alpine
+COPY --from=builder /usr/src/app/.vitepress/dist /usr/share/nginx/html/onomis-docs
