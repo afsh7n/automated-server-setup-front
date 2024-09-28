@@ -1,0 +1,10 @@
+FROM nginx:alpine
+
+# کپی اسکریپت init.sh به کانتینر
+COPY ./../docker/init.sh /usr/local/bin/init.sh
+
+# تغییر مجوز اجرایی برای اسکریپت
+RUN chmod +x /usr/local/bin/init.sh
+
+# تعریف CMD برای اجرای اسکریپت و سپس Nginx
+CMD ["/bin/sh", "-c", "/usr/local/bin/init.sh && nginx -g 'daemon off;'"]

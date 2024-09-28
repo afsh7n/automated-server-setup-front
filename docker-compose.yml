@@ -1,7 +1,9 @@
 version: '3'
 services:
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nginx
     ports:
       - "80:80"
     volumes:
@@ -10,8 +12,10 @@ services:
       - onomis_react
       - onomis_vue
       - onomis_docs
-      - onomis_landing
       - emeax_landing
+      - onomis_landing
+    networks:
+      - frontend_network
 
   onomis_react:
     build:
@@ -19,6 +23,8 @@ services:
       dockerfile: ./docker/Dockerfile.react
     ports:
       - "3000:3000"
+    networks:
+      - frontend_network
 
   onomis_vue:
     build:
@@ -26,6 +32,8 @@ services:
       dockerfile: ./docker/Dockerfile.vue
     ports:
       - "3001:3001"
+    networks:
+      - frontend_network
 
   onomis_docs:
     build:
@@ -33,17 +41,34 @@ services:
       dockerfile: ./docker/Dockerfile.docs
     ports:
       - "3002:3002"
-
-  onomis_landing:
-    image: nginx:alpine
-    volumes:
-      - ./src/onomis:/usr/share/nginx/html
-    ports:
-      - "3003:80"
+    networks:
+      - frontend_network
 
   emeax_landing:
-    image: nginx:alpine
-    volumes:
-      - ./src/emeax:/usr/share/nginx/html
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.javascript
+      args:
+        FOLDER_NAME: emeax
+        PORT: 3003
     ports:
-      - "3004:80"
+      - "3003:3003"
+    networks:
+      - frontend_network
+
+  onomis_landing:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.javascript
+      args:
+        FOLDER_NAME: onomis
+        PORT: 3004
+    ports:
+      - "3004:3004"
+    networks:
+      - frontend_network
+
+
+networks:
+  frontend_network:
+    driver: bridge

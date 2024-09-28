@@ -103,9 +103,9 @@ for project_name in "${!project_folders[@]}"; do
             echo -e "${BLUE}Adding base configuration to $vite_config_path...${NC}"
             # Add the base line dynamically based on the project name
             if [[ "$project_name" == "onomis-react" ]]; then
-                base_line="base: './',"
+                base_line="base: '/preview/onomis-react/',"
             elif [[ "$project_name" == "onomis-vue" ]]; then
-                base_line="base: './',"
+                base_line="base: '/preview/onomis-vue/',"
             fi
 
             # Insert the base line after 'defineConfig({'
