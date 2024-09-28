@@ -1,43 +1,35 @@
-version: '3.8'
-
+version: '3'
 services:
   nginx:
     image: nginx:alpine
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - onomis-react-build:/usr/share/nginx/html/onomis-react
-      - onomis-vue-build:/usr/share/nginx/html/onomis-vue
-      - onomis-docs-build:/usr/share/nginx/html/onomis-docs
-      - ./src/onomis:/usr/share/nginx/html/onomis
-      - ./src/emeax:/usr/share/nginx/html/emeax
     ports:
       - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./src/emeax:/usr/share/nginx/html/emeax
+      - ./src/onomis:/usr/share/nginx/html/onomis
+    depends_on:
+      - onomis_react
+      - onomis_vue
+      - onomis_docs
 
-  onomis_react_builder:
+  onomis_react:
     build:
       context: .
-      dockerfile: docker/Dockerfile.react
-    volumes:
-      - onomis-react-build:/usr/src/app/dist
-    command: ["/bin/true"]
+      dockerfile: ./docker/Dockerfile.react
+    ports:
+      - "3000:3000"
 
-  onomis_vue_builder:
+  onomis_vue:
     build:
       context: .
-      dockerfile: docker/Dockerfile.vue
-    volumes:
-      - onomis-vue-build:/usr/src/app/dist
-    command: ["/bin/true"]
+      dockerfile: ./docker/Dockerfile.vue
+    ports:
+      - "3001:3001"
 
-  onomis_docs_builder:
+  onomis_docs:
     build:
       context: .
-      dockerfile: docker/Dockerfile.docs
-    volumes:
-      - onomis-docs-build:/usr/src/app/.vitepress/dist
-    command: ["/bin/true"]
-
-volumes:
-  onomis-react-build:
-  onomis-vue-build:
-  onomis-docs-build:
+      dockerfile: ./docker/Dockerfile.docs
+    ports:
+      - "3002:3002"
