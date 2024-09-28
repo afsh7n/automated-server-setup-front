@@ -6,12 +6,12 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./src/emeax:/usr/share/nginx/html/emeax
-      - ./src/onomis:/usr/share/nginx/html/onomis
     depends_on:
       - onomis_react
       - onomis_vue
       - onomis_docs
+      - onomis_landing
+      - emeax_landing
 
   onomis_react:
     build:
@@ -33,3 +33,17 @@ services:
       dockerfile: ./docker/Dockerfile.docs
     ports:
       - "3002:3002"
+
+  onomis_landing:
+    image: nginx:alpine
+    volumes:
+      - ./src/onomis:/usr/share/nginx/html
+    ports:
+      - "3003:80"
+
+  emeax_landing:
+    image: nginx:alpine
+    volumes:
+      - ./src/emeax:/usr/share/nginx/html
+    ports:
+      - "3004:80"
