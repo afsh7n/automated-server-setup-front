@@ -151,45 +151,72 @@ echo -e "${GREEN}Docker Compose started successfully.${NC}"
 
 
 # Step 10: Clone repositories into respective folders
-if ! command -v gitlab-runner &>/dev/null; then
+# Install GitLab Runner (if needed)
+if command -v gitlab-runner &>/dev/null; then
+    echo -e "${GREEN}GitLab Runner is already installed. Skipping installation.${NC}"
+else
     echo -e "${BLUE}Installing GitLab Runner...${NC}"
-    curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+    curl -L --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
     sudo chmod +x /usr/local/bin/gitlab-runner
     echo -e "${GREEN}GitLab Runner installed successfully.${NC}"
 fi
 
-for project_name in "${!project_folders[@]}"; do
-    folder_name=${project_folders[$project_name]}
-    repo_url=${project_urls[$project_name]}
+# Step 1: Define the deploy user
+read -p "Please enter the username for the deploy user (default: deployer): " deploy_user
+deploy_user=${deploy_user:-deployer}
 
-    # Extract the base GitLab project path (group and project name)
-    project_path=$(echo "$repo_url" | sed 's/.*gitlab.com[:\/]\(.*\)\.git/\1/')
+# Step 2: Install and configure GitLab Runner as a service
+echo -e "${BLUE}Installing GitLab Runner service for user $deploy_user...${NC}"
+sudo gitlab-runner install --user=$deploy_user
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to install GitLab Runner as a service.${NC}"
+    exit 1
+fi
 
-    # Generate the correct link to the project’s CI/CD settings
-    ci_cd_url="https://gitlab.com/${project_path}/-/settings/ci_cd"
-    echo -e "${BLUE}Follow this link to generate the registration token for ${folder_name}:${NC}"
-    echo -e "${BLUE}${ci_cd_url}${NC}"
+# Step 3: Start the GitLab Runner service
+echo -e "${BLUE}Starting GitLab Runner service...${NC}"
+sudo gitlab-runner start
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to start GitLab Runner.${NC}"
+    exit 1
+fi
 
-    # Prompt the user to enter the token
-    read -p "Enter the GitLab Runner registration token for ${folder_name}: " token
+# Step 4: Register the GitLab Runner for each project
+declare -A project_urls=(
+    ["onomis-react"]="git@gitlab.com:JaxThePrime/react-test-app.git"
+    ["onomis-vue"]="git@gitlab.com:JaxThePrime/vue-test-app.git"
+    ["onomis-landing"]="git@gitlab.com:JaxThePrime/vanilla-js-test-app.git"
+    ["emeax-landing"]="git@gitlab.com:JaxThePrime/emeax-landing.git"
+    ["onomis-docs"]="git@gitlab.com:JaxThePrime/onomis-docs.git"
+)
 
-    # Register the GitLab Runner for the project using the deployer user
-    sudo -u $deploy_user gitlab-runner register \
-        --non-interactive \
+for project_name in "${!project_urls[@]}"; do
+    echo -e "${BLUE}Please register the GitLab Runner for $project_name.${NC}"
+    echo -e "Follow this link to generate the registration token:"
+    echo -e "${GREEN}${project_urls[$project_name]}/-/settings/ci_cd${NC}"
+
+    read -p "Enter the GitLab Runner registration token for $project_name: " runner_token
+
+    sudo gitlab-runner register --non-interactive \
         --url "https://gitlab.com/" \
-        --registration-token "$token" \
-        --description "${folder_name}" \
-        --tag-list "${folder_name}" \
+        --registration-token "$runner_token" \
         --executor "docker" \
-        --docker-image "alpine:latest"
+        --docker-image "alpine:latest" \
+        --description "$project_name runner" \
+        --tag-list "$project_name" \
+        --run-untagged="false" \
+        --locked="true"
 
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}GitLab Runner registered successfully for ${folder_name}.${NC}"
+        echo -e "${GREEN}GitLab Runner registered successfully for $project_name.${NC}"
     else
-        echo -e "${RED}Failed to register GitLab Runner for ${folder_name}. Please check the token and try again.${NC}"
+        echo -e "${RED}Failed to register GitLab Runner for $project_name. Please check the token and try again.${NC}"
         exit 1
     fi
 done
+
+echo -e "${GREEN}Setup complete!${NC}"
+
 
 
 # Step 11: Summary and Final Steps
