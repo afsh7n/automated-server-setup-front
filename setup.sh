@@ -65,6 +65,8 @@ declare -A project_folders=(
     ["onomis-docs"]="onomis-docs"
 )
 
+declare -A project_urls
+
 src_directory="/home/$deploy_user/automated-server-setup-front/src"
 
 # Ensure the src directory exists
@@ -82,52 +84,23 @@ for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     folder_path="$src_directory/$folder_name"
 
+    # Ask for the GitLab repository URL only once
     read -p "Please enter your GitLab repository URL for $project_name: " repo_url
+    project_urls[$project_name]=$repo_url
 
-    # Remove folder if it already exists (no confirmation needed)
-    if [ -d "$folder_path" ]; then
-        echo -e "${BLUE}Removing existing folder $folder_path...${NC}"
-        sudo rm -rf $folder_path
-        echo -e "${GREEN}Folder removed successfully.${NC}"
-    fi
-
-    # Clone the repository
-    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
-    git clone $repo_url $folder_path
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
-
-        # Check if vite.config.js exists, and add base configuration
-        vite_config_path="$folder_path/vite.config.js"
-        if [ -f "$vite_config_path" ]; then
-            echo -e "${BLUE}Adding base configuration to $vite_config_path...${NC}"
-            # Add the base line dynamically based on the project name
-            if [[ "$project_name" == "onomis-react" ]]; then
-                base_line="base: '/preview/onomis-react/',"
-            elif [[ "$project_name" == "onomis-vue" ]]; then
-                base_line="base: '/preview/onomis-vue/',"
-            fi
-
-            # Insert the base line after 'defineConfig({'
-            sed -i "/defineConfig({/a \  $base_line" "$vite_config_path"
-
-            echo -e "${GREEN}Base configuration added successfully to $vite_config_path.${NC}"
-        else
-            echo -e "${RED}vite.config.js not found for $project_name. Skipping base configuration.${NC}"
-        fi
-
-        # Check if package.json exists, and ensure dependencies are installed
-        package_json_path="$folder_path/package.json"
-        if [ -f "$package_json_path" ]; then
-            echo -e "${BLUE}Installing dependencies for $project_name...${NC}"
-            sudo -u $deploy_user npm install --prefix $folder_path
-            echo -e "${GREEN}Dependencies installed successfully for $project_name.${NC}"
-        else
-            echo -e "${RED}package.json not found for $project_name. Skipping dependency installation.${NC}"
-        fi
+    # Check if the folder already exists and is not empty
+    if [ -d "$folder_path" ] && [ "$(ls -A $folder_path)" ]; then
+        echo -e "${GREEN}$project_name already exists. Skipping clone.${NC}"
     else
-        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
-        exit 1
+        # Clone the repository
+        echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
+        git clone $repo_url $folder_path
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
+        else
+            echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
+            exit 1
+        fi
     fi
 done
 
@@ -178,45 +151,6 @@ echo -e "${GREEN}Docker Compose started successfully.${NC}"
 
 
 # Step 10: Clone repositories into respective folders
-declare -A project_folders=(
-    ["onomis-react"]="onomis-react"
-    ["onomis-vue"]="onomis-vue"
-    ["onomis-landing"]="onomis"
-    ["emeax-landing"]="emeax"
-    ["onomis-docs"]="onomis-docs"
-)
-
-declare -A project_urls
-
-src_directory="/home/$deploy_user/automated-server-setup-front/src"
-
-# Ensure the src directory exists
-if [ ! -d "$src_directory" ]; then
-    echo -e "${BLUE}Creating src directory...${NC}"
-    mkdir -p $src_directory
-fi
-
-for project_name in "${!project_folders[@]}"; do
-    folder_name=${project_folders[$project_name]}
-    folder_path="$src_directory/$folder_name"
-
-    read -p "Please enter your GitLab repository URL for $project_name: " repo_url
-
-    # Save the repository URL for later use in GitLab Runner registration
-    project_urls[$project_name]=$repo_url
-
-    # Clone the repository
-    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
-    git clone $repo_url $folder_path
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
-    else
-        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
-        exit 1
-    fi
-done
-
-# Step 11: Ensure GitLab Runner is installed
 if ! command -v gitlab-runner &>/dev/null; then
     echo -e "${BLUE}Installing GitLab Runner...${NC}"
     curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
@@ -224,13 +158,12 @@ if ! command -v gitlab-runner &>/dev/null; then
     echo -e "${GREEN}GitLab Runner installed successfully.${NC}"
 fi
 
-# Step 3: Register GitLab Runner for each project
 for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     repo_url=${project_urls[$project_name]}
 
     # Extract the base GitLab project path (group and project name)
-    project_path=$(echo "$repo_url" | sed 's/.*gitlab.com\/\(.*\)\.git/\1/')
+    project_path=$(echo "$repo_url" | sed 's/.*gitlab.com[:\/]\(.*\)\.git/\1/')
 
     # Generate the correct link to the project’s CI/CD settings
     ci_cd_url="https://gitlab.com/${project_path}/-/settings/ci_cd"
@@ -241,7 +174,7 @@ for project_name in "${!project_folders[@]}"; do
     read -p "Enter the GitLab Runner registration token for ${folder_name}: " token
 
     # Register the GitLab Runner for the project using the deployer user
-    sudo -u deployer gitlab-runner register \
+    sudo -u $deploy_user gitlab-runner register \
         --non-interactive \
         --url "https://gitlab.com/" \
         --registration-token "$token" \
