@@ -177,19 +177,64 @@ docker-compose up -d --build
 echo -e "${GREEN}Docker Compose started successfully.${NC}"
 
 
-# Function to register a GitLab runner
-register_gitlab_runner() {
-    local project_name=$1
-    local repo_url=$2
-    local folder_name=$3
-    local token=""
+# Step 10: Clone repositories into respective folders
+declare -A project_folders=(
+    ["onomis-react"]="onomis-react"
+    ["onomis-vue"]="onomis-vue"
+    ["onomis-landing"]="onomis"
+    ["emeax-landing"]="emeax"
+    ["onomis-docs"]="onomis-docs"
+)
+
+declare -A project_urls
+
+src_directory="/home/$deploy_user/automated-server-setup-front/src"
+
+# Ensure the src directory exists
+if [ ! -d "$src_directory" ]; then
+    echo -e "${BLUE}Creating src directory...${NC}"
+    mkdir -p $src_directory
+fi
+
+for project_name in "${!project_folders[@]}"; do
+    folder_name=${project_folders[$project_name]}
+    folder_path="$src_directory/$folder_name"
+
+    read -p "Please enter your GitLab repository URL for $project_name: " repo_url
+
+    # Save the repository URL for later use in GitLab Runner registration
+    project_urls[$project_name]=$repo_url
+
+    # Clone the repository
+    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
+    git clone $repo_url $folder_path
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
+    else
+        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
+        exit 1
+    fi
+done
+
+# Step 11: Ensure GitLab Runner is installed
+if ! command -v gitlab-runner &>/dev/null; then
+    echo -e "${BLUE}Installing GitLab Runner...${NC}"
+    curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+    sudo chmod +x /usr/local/bin/gitlab-runner
+    echo -e "${GREEN}GitLab Runner installed successfully.${NC}"
+fi
+
+# Step 3: Register GitLab Runner for each project
+for project_name in "${!project_folders[@]}"; do
+    folder_name=${project_folders[$project_name]}
+    repo_url=${project_urls[$project_name]}
 
     # Extract the base GitLab project path (group and project name)
     project_path=$(echo "$repo_url" | sed 's/.*gitlab.com\/\(.*\)\.git/\1/')
 
     # Generate the correct link to the project’s CI/CD settings
     ci_cd_url="https://gitlab.com/${project_path}/-/settings/ci_cd"
-    echo -e "${BLUE}Follow this link to generate the registration token:${NC}"
+    echo -e "${BLUE}Follow this link to generate the registration token for ${folder_name}:${NC}"
     echo -e "${BLUE}${ci_cd_url}${NC}"
 
     # Prompt the user to enter the token
@@ -211,53 +256,8 @@ register_gitlab_runner() {
         echo -e "${RED}Failed to register GitLab Runner for ${folder_name}. Please check the token and try again.${NC}"
         exit 1
     fi
-}
-
-# Step 1: Ensure GitLab Runner is installed
-if ! command -v gitlab-runner &>/dev/null; then
-    echo -e "${BLUE}Installing GitLab Runner...${NC}"
-    curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
-    sudo chmod +x /usr/local/bin/gitlab-runner
-    echo -e "${GREEN}GitLab Runner installed successfully.${NC}"
-fi
-
-# Step 2: Clone repositories into respective folders
-declare -A project_folders=(
-    ["onomis-react"]="onomis-react"
-    ["onomis-vue"]="onomis-vue"
-    ["onomis-landing"]="onomis"
-    ["emeax-landing"]="emeax"
-    ["onomis-docs"]="onomis-docs"
-)
-
-src_directory="/home/$deploy_user/automated-server-setup-front/src"
-
-# Ensure the src directory exists
-if [ ! -d "$src_directory" ]; then
-    echo -e "${BLUE}Creating src directory...${NC}"
-    mkdir -p $src_directory
-fi
-
-for project_name in "${!project_folders[@]}"; do
-    folder_name=${project_folders[$project_name]}
-    folder_path="$src_directory/$folder_name"
-
-    read -p "Please enter your GitLab repository URL for $project_name: " repo_url
-
-    # Clone the repository
-    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
-    git clone $repo_url $folder_path
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
-
-        # Register the GitLab runner for this project
-        register_gitlab_runner "$project_name" "$repo_url" "$folder_name"
-
-    else
-        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
-        exit 1
-    fi
 done
+
 
 # Step 11: Summary and Final Steps
 echo -e "${BLUE}========================= Summary =========================${NC}"
