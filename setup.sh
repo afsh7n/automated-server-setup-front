@@ -169,13 +169,6 @@ else
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
-#!/bin/bash
-
-# Colors for output
-BLUE='\033[0;34m'
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
 
 # Step 9: Start Docker Compose
 echo -e "${BLUE}Starting Docker Compose...${NC}"
@@ -183,51 +176,88 @@ cd /home/$deploy_user/automated-server-setup-front
 docker-compose up -d --build
 echo -e "${GREEN}Docker Compose started successfully.${NC}"
 
-#!/bin/bash
 
-# Step 10: Register GitLab Runners for each project
-echo -e "${BLUE}Step 10: Registering GitLab Runners for each project...${NC}"
+# Function to register a GitLab runner
+register_gitlab_runner() {
+    local project_name=$1
+    local repo_url=$2
+    local folder_name=$3
+    local token=""
 
-# Loop over projects to register runners
-for project_name in "${!project_folders[@]}"; do
-    folder_name=${project_folders[$project_name]}
+    # Extract the base GitLab project path (group and project name)
+    project_path=$(echo "$repo_url" | sed 's/.*gitlab.com\/\(.*\)\.git/\1/')
 
-    # Extract project name from the GitLab repository URL
-    project_slug=$(echo "$repo_url" | awk -F '/' '{print $(NF)}')
+    # Generate the correct link to the project’s CI/CD settings
+    ci_cd_url="https://gitlab.com/${project_path}/-/settings/ci_cd"
+    echo -e "${BLUE}Follow this link to generate the registration token:${NC}"
+    echo -e "${BLUE}${ci_cd_url}${NC}"
 
-    # Generate the CI/CD settings URL for this project
-    project_ci_cd_url="https://gitlab.com/${project_slug}/-/settings/ci_cd"
+    # Prompt the user to enter the token
+    read -p "Enter the GitLab Runner registration token for ${folder_name}: " token
 
-    # Display information for the user
-    echo -e "${BLUE}Please register the GitLab Runner for ${project_name}.${NC}"
-    echo -e "${GREEN}Follow this link to generate the registration token:${NC}"
-    echo -e "${GREEN}${project_ci_cd_url}${NC}"
-    echo -e "${BLUE}You will need to generate the registration token for this project and then enter it below.${NC}"
-
-    # Read the registration token
-    read -p "Enter the GitLab Runner registration token for ${project_name}: " gitlab_token
-
-    # Register the GitLab Runner for this project
-    sudo -u $deploy_user gitlab-runner register \
+    # Register the GitLab Runner for the project using the deployer user
+    sudo -u deployer gitlab-runner register \
         --non-interactive \
         --url "https://gitlab.com/" \
-        --registration-token "$gitlab_token" \
+        --registration-token "$token" \
+        --description "${folder_name}" \
+        --tag-list "${folder_name}" \
         --executor "docker" \
-        --docker-image "alpine" \
-        --description "$project_slug-runner" \
-        --tag-list "$project_slug" \
-        --run-untagged="true" \
-        --locked="false"
+        --docker-image "alpine:latest"
 
-    # Provide feedback to the user
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}GitLab Runner registered successfully for ${project_name}.${NC}"
+        echo -e "${GREEN}GitLab Runner registered successfully for ${folder_name}.${NC}"
     else
-        echo -e "${RED}Failed to register GitLab Runner for ${project_name}. Please check the token and try again.${NC}"
+        echo -e "${RED}Failed to register GitLab Runner for ${folder_name}. Please check the token and try again.${NC}"
+        exit 1
+    fi
+}
+
+# Step 1: Ensure GitLab Runner is installed
+if ! command -v gitlab-runner &>/dev/null; then
+    echo -e "${BLUE}Installing GitLab Runner...${NC}"
+    curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+    sudo chmod +x /usr/local/bin/gitlab-runner
+    echo -e "${GREEN}GitLab Runner installed successfully.${NC}"
+fi
+
+# Step 2: Clone repositories into respective folders
+declare -A project_folders=(
+    ["onomis-react"]="onomis-react"
+    ["onomis-vue"]="onomis-vue"
+    ["onomis-landing"]="onomis"
+    ["emeax-landing"]="emeax"
+    ["onomis-docs"]="onomis-docs"
+)
+
+src_directory="/home/$deploy_user/automated-server-setup-front/src"
+
+# Ensure the src directory exists
+if [ ! -d "$src_directory" ]; then
+    echo -e "${BLUE}Creating src directory...${NC}"
+    mkdir -p $src_directory
+fi
+
+for project_name in "${!project_folders[@]}"; do
+    folder_name=${project_folders[$project_name]}
+    folder_path="$src_directory/$folder_name"
+
+    read -p "Please enter your GitLab repository URL for $project_name: " repo_url
+
+    # Clone the repository
+    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
+    git clone $repo_url $folder_path
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
+
+        # Register the GitLab runner for this project
+        register_gitlab_runner "$project_name" "$repo_url" "$folder_name"
+
+    else
+        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
+        exit 1
     fi
 done
-
-echo -e "${GREEN}All GitLab Runners have been registered successfully!${NC}"
 
 # Step 11: Summary and Final Steps
 echo -e "${BLUE}========================= Summary =========================${NC}"
