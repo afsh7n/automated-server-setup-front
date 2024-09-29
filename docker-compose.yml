@@ -7,7 +7,9 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - SERVER_NAME=${SERVER_NAME}
     depends_on:
       - onomis_react
       - onomis_vue
@@ -21,6 +23,9 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.react
+      args:
+        FOLDER_NAME: onomis-react
+        PORT: 3000
     ports:
       - "3000:3000"
     networks:
@@ -30,6 +35,9 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.vue
+      args:
+        FOLDER_NAME: onomis-vue
+        PORT: 3001
     ports:
       - "3001:3001"
     networks:
@@ -39,6 +47,9 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.docs
+      args:
+        FOLDER_NAME: onomis-docs
+        PORT: 3001
     ports:
       - "3002:3002"
     networks:

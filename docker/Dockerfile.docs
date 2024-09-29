@@ -1,18 +1,41 @@
 # Dockerfile for Docs Project
 FROM node:16-alpine
 
+# Define build-time arguments
+ARG FOLDER_NAME
+ARG PORT
+
+# Set environment variable for the port
+ENV PORT=${PORT}
+
+# Set working directory
 WORKDIR /usr/src/app
 
-COPY ./../src/onomis-docs/package*.json ./
+# Echo the folder name for debugging
+RUN echo "Building folder: ${FOLDER_NAME}"
+
+# Copy package.json and install dependencies
+COPY ./../src/${FOLDER_NAME}/package*.json ./
 
 RUN npm install
 
-COPY ./../src/onomis-docs/. .
+# Copy the entire project folder to the container
+COPY ./../src/${FOLDER_NAME}/. .
 
+# Build the project
 RUN npm run docs:build
 
+# Install serve globally
 RUN npm install -g serve
 
-EXPOSE 3002
+# Copy the start.sh script
+COPY ./docker/start.sh .
 
-CMD ["serve", "-s", ".vitepress/dist", "-l", "3002"]
+# Ensure the script has executable permissions
+RUN chmod +x start.sh
+
+# Expose the port the project will be served on
+EXPOSE ${PORT}
+
+# Run the start.sh script to serve the build from .vitepress/dist
+CMD ["./start.sh"]
