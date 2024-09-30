@@ -65,7 +65,7 @@ declare -A project_folders=(
     ["onomis-docs"]="onomis-docs"
 )
 
-declare -A project_urls
+declare -A project_urls  # This array will hold the URLs for each project
 
 src_directory="/home/$deploy_user/automated-server-setup-front/src"
 
@@ -86,7 +86,7 @@ for project_name in "${!project_folders[@]}"; do
 
     # Ask for the GitLab repository URL only once
     read -p "Please enter your GitLab repository URL for $project_name: " repo_url
-    project_urls[$project_name]=$repo_url
+    project_urls[$project_name]=$repo_url  # Store the repo URL in the array
 
     # Check if the folder already exists and is not empty
     if [ -d "$folder_path" ] && [ "$(ls -A $folder_path)" ]; then
@@ -181,15 +181,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Step 4: Register the GitLab Runner for each project
-declare -A project_urls=(
-    ["onomis-react"]="git@gitlab.com:JaxThePrime/react-test-app.git"
-    ["onomis-vue"]="git@gitlab.com:JaxThePrime/vue-test-app.git"
-    ["onomis-landing"]="git@gitlab.com:JaxThePrime/vanilla-js-test-app.git"
-    ["emeax-landing"]="git@gitlab.com:JaxThePrime/emeax-landing.git"
-    ["onomis-docs"]="git@gitlab.com:JaxThePrime/onomis-docs.git"
-)
 
+# Step 11: Register the GitLab Runner for each project using the URLs from earlier
 for project_name in "${!project_urls[@]}"; do
     echo -e "${BLUE}Please register the GitLab Runner for $project_name.${NC}"
     echo -e "Follow this link to generate the registration token:"
