@@ -89,18 +89,20 @@ for project_name in "${!project_folders[@]}"; do
     project_urls[$project_name]=$repo_url  # Store the repo URL in the array
 
     # Check if the folder already exists and is not empty
-    if [ -d "$folder_path" ] && [ "$(ls -A $folder_path)" ]; then
-        echo -e "${GREEN}$project_name already exists. Skipping clone.${NC}"
+    if [ -d "$folder_path" ]; then
+        echo -e "${RED}$project_name already exists. Removing it...${NC}"
+        sudo rm -rf $folder_path  # Remove the existing folder
+        echo -e "${GREEN}Removed existing folder $folder_path.${NC}"
+    fi
+
+    # Clone the repository
+    echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
+    git clone $repo_url $folder_path
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
     else
-        # Clone the repository
-        echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
-        git clone $repo_url $folder_path
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}$project_name cloned successfully to $folder_path.${NC}"
-        else
-            echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
-            exit 1
-        fi
+        echo -e "${RED}Failed to clone $project_name. Please check the URL and SSH key.${NC}"
+        exit 1
     fi
 done
 
