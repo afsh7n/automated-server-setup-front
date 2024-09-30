@@ -106,6 +106,29 @@ for project_name in "${!project_folders[@]}"; do
     fi
 done
 
+# Step 5: Add base configuration to vite.config.js for onomis-react and onomis-vue
+for project_name in "onomis-react" "onomis-vue"; do
+    folder_path="$src_directory/$project_name"
+    vite_config_path="$folder_path/vite.config.js"
+
+    if [ -f "$vite_config_path" ]; then
+        echo -e "${BLUE}Adding base configuration to $vite_config_path for $project_name...${NC}"
+        # Determine the correct base URL based on the project name
+        if [[ "$project_name" == "onomis-react" ]]; then
+            base_line="base: '/preview/onomis-react/',"
+        elif [[ "$project_name" == "onomis-vue" ]]; then
+            base_line="base: '/preview/onomis-vue/',"
+        fi
+
+        # Insert the base line after 'defineConfig({'
+        sed -i "/defineConfig({/a \  $base_line" "$vite_config_path"
+
+        echo -e "${GREEN}Base configuration added successfully to $vite_config_path.${NC}"
+    else
+        echo -e "${RED}vite.config.js not found for $project_name. Skipping base configuration.${NC}"
+    fi
+done
+
 # Step 5: Install Docker (if needed)
 if command -v docker &>/dev/null; then
     echo -e "${GREEN}Docker is already installed. Skipping Docker installation.${NC}"
