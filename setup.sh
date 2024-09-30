@@ -200,7 +200,7 @@ for project_name in "${!project_urls[@]}"; do
     sudo gitlab-runner register --non-interactive \
         --url "https://gitlab.com/" \
         --registration-token "$runner_token" \
-        --executor "docker" \
+        --executor "shell" \
         --docker-image "alpine:latest" \
         --description "$project_name runner" \
         --tag-list "$project_name" \
