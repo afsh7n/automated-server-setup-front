@@ -14,6 +14,10 @@ WORKDIR /usr/src/app
 # Echo the folder name for debugging
 RUN echo "Building folder: ${FOLDER_NAME}"
 
+
+# Install Yarn globally
+RUN npm install -g yarn
+
 # Copy package.json and install dependencies
 COPY ./../src/${FOLDER_NAME}/package*.json ./
 
