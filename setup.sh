@@ -157,7 +157,27 @@ if [ -f "/home/$deploy_user/.bash_logout" ]; then
     echo -e "${GREEN}.bash_logout file has been removed successfully.${NC}"
 fi
 
-# Step 8: Change SSH port to 23232
+# Step 8: Change SSH port to 23232 and configure UFW
+
+# Check if ufw is installed and install it if necessary
+if command -v ufw &>/dev/null; then
+    echo -e "${GREEN}UFW is already installed. Skipping installation.${NC}"
+else
+    echo -e "${BLUE}Installing UFW (Uncomplicated Firewall)...${NC}"
+    sudo apt-get update && sudo apt-get install -y ufw
+    echo -e "${GREEN}UFW installed successfully.${NC}"
+fi
+
+# Enable UFW if it is not enabled already
+if sudo ufw status | grep -q "inactive"; then
+    echo -e "${BLUE}Enabling UFW...${NC}"
+    sudo ufw enable
+    echo -e "${GREEN}UFW enabled.${NC}"
+else
+    echo -e "${GREEN}UFW is already active.${NC}"
+fi
+
+# Change SSH port to 23232 if not already set
 if grep -q "Port 23232" /etc/ssh/sshd_config; then
     echo -e "${GREEN}SSH port is already set to 23232. Skipping this step.${NC}"
 else
@@ -167,6 +187,12 @@ else
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
+# Configure UFW to allow port 23232 for SSH and deny port 22
+echo -e "${BLUE}Configuring UFW to allow SSH on port 23232 and deny port 22...${NC}"
+sudo ufw allow 23232/tcp
+sudo ufw deny 22/tcp
+sudo ufw reload
+echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 # Step 9: Start Docker Compose
 echo -e "${BLUE}Starting Docker Compose...${NC}"
