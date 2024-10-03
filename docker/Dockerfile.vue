@@ -21,13 +21,13 @@ RUN npm install -g yarn
 # Copy package.json and install dependencies
 COPY ./../src/${FOLDER_NAME}/package*.json ./
 
-RUN npm install
+RUN yarn install
 
 # Copy the entire project folder to the container
 COPY ./../src/${FOLDER_NAME}/. .
 
 # Build the project
-RUN npm run build
+RUN yarn build
 
 # Install serve globally
 RUN npm install -g serve
