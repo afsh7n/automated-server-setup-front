@@ -63,7 +63,7 @@ services:
     networks:
       - frontend_network
 
-  onomis_landing:
+  onomis:
     build:
       context: .
       dockerfile: docker/Dockerfile.javascript
