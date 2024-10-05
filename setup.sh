@@ -207,6 +207,17 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
 
+# Services to start
+declare -a active_services=()
+
+# Check if each project directory exists and is not empty
+for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
+    project_dir="/home/deployer/automated-server-setup-front/src/$project"
+    if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
+        active_services+=("$project")
+    fi
+done
+
 # Join active services into a multiline string for insertion
 depends_on_services=$(printf "%s\n" "${active_services[@]}")
 
@@ -220,18 +231,6 @@ else
     # If no services are found, remove the depends_on block completely
     sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
 fi
-
-
-# Services to start
-declare -a active_services=()
-
-# Check if each project directory exists and is not empty
-for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
-    project_dir="/home/deployer/automated-server-setup-front/src/$project"
-    if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
-        active_services+=("$project")
-    fi
-done
 
 
 # Start only active services with docker-compose
