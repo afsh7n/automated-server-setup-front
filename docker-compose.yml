@@ -15,7 +15,7 @@ services:
       networks:
         - frontend_network
 
-  onomis_react:
+  onomis-react:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.react
@@ -27,7 +27,7 @@ services:
     networks:
       - frontend_network
 
-  onomis_vue:
+  onomis-vue:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.vue
@@ -39,7 +39,7 @@ services:
     networks:
       - frontend_network
 
-  onomis_docs:
+  onomis-docs:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.docs
@@ -51,7 +51,7 @@ services:
     networks:
       - frontend_network
 
-  emeax_landing:
+  emeax:
     build:
       context: .
       dockerfile: docker/Dockerfile.javascript
