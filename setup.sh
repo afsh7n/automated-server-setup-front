@@ -203,41 +203,31 @@ sudo ufw deny 22/tcp
 sudo ufw reload
 echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
-# Step 9: Start Docker Compose based on existing projects
-echo -e "${BLUE}Starting Docker Compose...${NC}"
 
-#!/bin/bash
 
-# Services to add in depends_on
+echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
+
+# Services to start
 declare -a active_services=()
 
-# Check if each service is available and should be added to depends_on
+# Check if each project directory exists and is not empty
 for project in "onomis_react" "onomis_vue" "onomis_docs" "emeax_landing" "onomis_landing"; do
     project_dir="/home/deployer/automated-server-setup-front/src/$project"
     if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
-        active_services+=("- $project")
+        active_services+=("$project")
+    else
+        echo -e "${RED}$project not found or empty, skipping...${NC}"
     fi
 done
 
-# Join active services into a multiline string for insertion
-depends_on_services=$(printf "%s\n" "${active_services[@]}")
-
-# Replace placeholder in docker-compose.yml
-docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
-
-if [ -n "$depends_on_services" ]; then
-    # Replace placeholder with active services
-    sed -i "/PLACEHOLDER_DEPENDS_ON_SERVICES/c\\$depends_on_services" "$docker_compose_file"
+# Start only active services with docker-compose
+if [ ${#active_services[@]} -gt 0 ]; then
+    echo -e "${BLUE}Active services: ${active_services[@]}${NC}"
+    docker-compose up -d --build "${active_services[@]}"
+    echo -e "${GREEN}Docker Compose started successfully with active services.${NC}"
 else
-    # If no services are found, remove the depends_on block completely
-    sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
+    echo -e "${RED}No active services found to start with Docker Compose.${NC}"
 fi
-
-echo "Docker Compose updated with active services."
-
-
-docker-compose up -d --build
-echo -e "${GREEN}Docker Compose started successfully.${NC}"
 
 
 
