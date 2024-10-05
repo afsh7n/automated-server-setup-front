@@ -237,7 +237,7 @@ done
 # Start only active services with docker-compose
 if [ ${#active_services[@]} -gt 0 ]; then
     echo -e "${BLUE}Active services: ${active_services[@]}${NC}"
-    docker-compose up -d --build "${active_services[@]}"
+    docker-compose up -d --build nginx "${active_services[@]}"
     echo -e "${GREEN}Docker Compose started successfully with active services.${NC}"
 else
     echo -e "${RED}No active services found to start with Docker Compose.${NC}"
