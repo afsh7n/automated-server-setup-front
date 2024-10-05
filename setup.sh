@@ -84,18 +84,26 @@ for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     folder_path="$src_directory/$folder_name"
 
-    # Ask for the GitLab repository URL only once
-    read -p "Please enter your GitLab repository URL for $project_name: " repo_url
-    project_urls[$project_name]=$repo_url  # Store the repo URL in the array
-
-    # Check if the folder already exists and is not empty
-    if [ -d "$folder_path" ]; then
-        echo -e "${RED}$project_name already exists. Removing it...${NC}"
-        sudo rm -rf $folder_path  # Remove the existing folder
-        echo -e "${GREEN}Removed existing folder $folder_path.${NC}"
+    read -p "Please enter your GitLab repository URL for $project_name (leave empty if you don't want to set this project): " repo_url
+    if [[ -z "$repo_url" ]]; then
+        echo -e "${YELLOW}Skipping setup for $project_name as no URL was provided.${NC}"
+        continue
     fi
 
-    # Clone the repository
+    project_urls[$project_name]=$repo_url  # Store the repo URL in the array
+
+    if [ -d "$folder_path" ]; then
+        read -p "Folder already exists for $project_name. Do you want to remove and re-clone it? (y/n): " remove_folder
+        if [[ "$remove_folder" == "y" || "$remove_folder" == "Y" ]]; then
+            echo -e "${RED}Removing $project_name...${NC}"
+            sudo rm -rf "$folder_path"
+            echo -e "${GREEN}Removed existing folder $folder_path.${NC}"
+        else
+            echo -e "${YELLOW}Skipping re-clone for $project_name.${NC}"
+            continue
+        fi
+    fi
+
     echo -e "${BLUE}Cloning $project_name into $folder_path...${NC}"
     git clone $repo_url $folder_path
     if [ $? -eq 0 ]; then
@@ -105,6 +113,7 @@ for project_name in "${!project_folders[@]}"; do
         exit 1
     fi
 done
+
 
 # Step 5: Add base configuration to vite.config.js for onomis-react and onomis-vue
 for project_name in "onomis-react" "onomis-vue"; do
@@ -168,11 +177,54 @@ else
 fi
 
 
-# Step 9: Start Docker Compose
+# Step 9: Start Docker Compose based on existing projects
 echo -e "${BLUE}Starting Docker Compose...${NC}"
-cd /home/$deploy_user/automated-server-setup-front
+
+nginx_depends=""
+if [ -d "$src_directory/onomis-react" ]; then
+    nginx_depends="$nginx_depends - onomis_react"
+fi
+if [ -d "$src_directory/onomis-vue" ]; then
+    nginx_depends="$nginx_depends - onomis_vue"
+fi
+if [ -d "$src_directory/onomis-docs" ]; then
+    nginx_depends="$nginx_depends - onomis_docs"
+fi
+if [ -d "$src_directory/emeax" ]; then
+    nginx_depends="$nginx_depends - emeax_landing"
+fi
+if [ -d "$src_directory/onomis" ]; then
+    nginx_depends="$nginx_depends - onomis_landing"
+fi
+
+# Add nginx_depends to the docker-compose.yml dynamically
+cat << EOF > docker-compose.yml
+version: '3'
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - SERVER_NAME=\${SERVER_NAME}
+    depends_on:
+      $nginx_depends
+    networks:
+      - frontend_network
+
+  # Other services here based on existing projects
+networks:
+  frontend_network:
+    driver: bridge
+EOF
+
 docker-compose up -d --build
 echo -e "${GREEN}Docker Compose started successfully.${NC}"
+
 
 
 # Step 10: Clone repositories into respective folders
@@ -209,17 +261,32 @@ fi
 
 # Step 11: Register the GitLab Runner for each project using the URLs from earlier
 for project_name in "${!project_urls[@]}"; do
-    echo -e "${BLUE}Please register the GitLab Runner for $project_name.${NC}"
-    echo -e "Follow this link to generate the registration token:"
-    echo -e "${GREEN}${project_urls[$project_name]}/-/settings/ci_cd${NC}"
+    if [[ -z "${project_urls[$project_name]}" ]]; then
+        echo -e "${YELLOW}Skipping GitLab Runner setup for $project_name as it was not set up.${NC}"
+        continue
+    fi
 
+    # Check if we need to remove an existing GitLab Runner
+    runner_exists=$(sudo gitlab-runner list | grep -c "$project_name")
+    if [ $runner_exists -ne 0 ]; then
+        read -p "A runner already exists for $project_name. Do you want to remove it and re-register? (y/n): " remove_runner
+        if [[ "$remove_runner" == "y" || "$remove_runner" == "Y" ]]; then
+            sudo gitlab-runner unregister --name "$project_name runner"
+            echo -e "${GREEN}Removed existing runner for $project_name.${NC}"
+        else
+            echo -e "${YELLOW}Skipping GitLab Runner registration for $project_name.${NC}"
+            continue
+        fi
+    fi
+
+    # Register the runner
+    echo -e "${BLUE}Registering GitLab Runner for $project_name...${NC}"
     read -p "Enter the GitLab Runner registration token for $project_name: " runner_token
 
     sudo gitlab-runner register --non-interactive \
         --url "https://gitlab.com/" \
         --registration-token "$runner_token" \
         --executor "shell" \
-        --docker-image "alpine:latest" \
         --description "$project_name runner" \
         --tag-list "$project_name" \
         --run-untagged="false" \
