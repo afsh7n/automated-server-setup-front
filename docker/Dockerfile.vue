@@ -1,5 +1,5 @@
 # Dockerfile for Vue Project
-FROM node:16-alpine
+FROM node:20-alpine
 
 # Define build-time arguments
 ARG FOLDER_NAME

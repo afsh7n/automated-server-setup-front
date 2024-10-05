@@ -1,5 +1,5 @@
 # Use a lightweight Node.js image
-FROM node:16-alpine
+FROM node:20-alpine
 
 ARG FOLDER_NAME
 ARG PORT
