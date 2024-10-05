@@ -206,47 +206,35 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 # Step 9: Start Docker Compose based on existing projects
 echo -e "${BLUE}Starting Docker Compose...${NC}"
 
-nginx_depends=""
-if [ -d "$src_directory/onomis-react" ]; then
-    nginx_depends="$nginx_depends - onomis_react"
-fi
-if [ -d "$src_directory/onomis-vue" ]; then
-    nginx_depends="$nginx_depends - onomis_vue"
-fi
-if [ -d "$src_directory/onomis-docs" ]; then
-    nginx_depends="$nginx_depends - onomis_docs"
-fi
-if [ -d "$src_directory/emeax" ]; then
-    nginx_depends="$nginx_depends - emeax_landing"
-fi
-if [ -d "$src_directory/onomis" ]; then
-    nginx_depends="$nginx_depends - onomis_landing"
+#!/bin/bash
+
+# Services to add in depends_on
+declare -a active_services=()
+
+# Check if each service is available and should be added to depends_on
+for project in "onomis_react" "onomis_vue" "onomis_docs" "emeax_landing" "onomis_landing"; do
+    project_dir="/home/deployer/automated-server-setup-front/src/$project"
+    if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
+        active_services+=("- $project")
+    fi
+done
+
+# Join active services into a multiline string for insertion
+depends_on_services=$(printf "%s\n" "${active_services[@]}")
+
+# Replace placeholder in docker-compose.yml
+docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
+
+if [ -n "$depends_on_services" ]; then
+    # Replace placeholder with active services
+    sed -i "/PLACEHOLDER_DEPENDS_ON_SERVICES/c\\$depends_on_services" "$docker_compose_file"
+else
+    # If no services are found, remove the depends_on block completely
+    sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
 fi
 
-# Add nginx_depends to the docker-compose.yml dynamically
-cat << EOF > docker-compose.yml
-version: '3'
-services:
-  nginx:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
-    environment:
-      - SERVER_NAME=\${SERVER_NAME}
-    depends_on:
-      $nginx_depends
-    networks:
-      - frontend_network
+echo "Docker Compose updated with active services."
 
-  # Other services here based on existing projects
-networks:
-  frontend_network:
-    driver: bridge
-EOF
 
 docker-compose up -d --build
 echo -e "${GREEN}Docker Compose started successfully.${NC}"
