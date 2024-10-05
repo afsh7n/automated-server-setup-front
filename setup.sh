@@ -60,8 +60,8 @@ read -p "Press enter after you've added the SSH key to GitLab..."
 declare -A project_folders=(
     ["onomis-react"]="onomis-react"
     ["onomis-vue"]="onomis-vue"
-    ["onomis-landing"]="onomis"
-    ["emeax-landing"]="emeax"
+    ["onomis"]="onomis"
+    ["emeax"]="emeax"
     ["onomis-docs"]="onomis-docs"
 )
 
@@ -226,7 +226,7 @@ fi
 declare -a active_services=()
 
 # Check if each project directory exists and is not empty
-for project in "onomis_react" "onomis_vue" "onomis_docs" "emeax_landing" "onomis"; do
+for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
     project_dir="/home/deployer/automated-server-setup-front/src/$project"
     if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
         active_services+=("$project")
