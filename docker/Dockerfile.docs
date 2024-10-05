@@ -16,7 +16,7 @@ RUN echo "Building folder: ${FOLDER_NAME}"
 
 
 # Install Yarn globally
-RUN npm install -g yarn
+RUN npm install -g yarn --force
 
 # Copy package.json and install dependencies
 COPY ./../src/${FOLDER_NAME}/package*.json ./
