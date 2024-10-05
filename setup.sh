@@ -211,14 +211,13 @@ echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
 declare -a active_services=()
 
 # Check if each project directory exists and is not empty
-for project in "onomis_react" "onomis_vue" "onomis_docs" "emeax_landing" "onomis_landing"; do
+for project in "onomis_react" "onomis_vue" "onomis_docs" "emeax_landing" "onomis"; do
     project_dir="/home/deployer/automated-server-setup-front/src/$project"
     if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
         active_services+=("$project")
-    else
-        echo -e "${RED}$project not found or empty, skipping...${NC}"
     fi
 done
+
 
 # Start only active services with docker-compose
 if [ ${#active_services[@]} -gt 0 ]; then
