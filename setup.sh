@@ -207,6 +207,21 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
 
+# Join active services into a multiline string for insertion
+depends_on_services=$(printf "%s\n" "${active_services[@]}")
+
+# Replace placeholder in docker-compose.yml
+docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
+
+if [ -n "$depends_on_services" ]; then
+    # Replace placeholder with active services
+    sed -i "/PLACEHOLDER_DEPENDS_ON_SERVICES/c\\$depends_on_services" "$docker_compose_file"
+else
+    # If no services are found, remove the depends_on block completely
+    sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
+fi
+
+
 # Services to start
 declare -a active_services=()
 
