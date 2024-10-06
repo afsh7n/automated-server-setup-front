@@ -207,47 +207,32 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
+# List of services to check and potentially run
+services=("onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis")
 
-# Services to add in depends_on
-declare -a active_services=()
+echo -e "${BLUE}Checking and starting active services...${NC}"
 
-# Check if each service is available and should be added to depends_on
-for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
-    project_dir="/home/deployer/automated-server-setup-front/src/$project"
+# Step 1: Always start Nginx
+echo -e "${BLUE}Starting Nginx...${NC}"
+docker-compose up -d nginx
+
+# Step 2: Check each service and start if available
+for service in "${services[@]}"; do
+    # Directory where the project is located
+    project_dir="/home/deployer/automated-server-setup-front/src/$service"
+
+    # Check if the directory exists and is not empty
     if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
-        active_services+=("$project")
+        echo -e "${GREEN}Service $service found. Starting...${NC}"
+        # Start the specific service
+        docker-compose up -d --build $service
+    else
+        echo -e "${RED}Service $service not found or directory is empty. Skipping...${NC}"
     fi
 done
 
-# Join active services into a multiline string for insertion
-depends_on_services=$(printf "        - %s\n" "${active_services[@]}")
-
-# Replace placeholder in docker-compose.yml
-docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
-
-if [ -n "$depends_on_services" ]; then
-    # Check if depends_on already exists in nginx service and update it
-    if grep -q "PLACEHOLDER_DEPENDS_ON_SERVICES" "$docker_compose_file"; then
-        # Replace the placeholder with the active services
-        sed -i "/PLACEHOLDER_DEPENDS_ON_SERVICES/c\\        depends_on:\n$depends_on_services" "$docker_compose_file"
-    else
-        # Add depends_on to nginx service if it doesn't exist
-        sed -i "/nginx:/a\        depends_on:\n$depends_on_services" "$docker_compose_file"
-    fi
-else
-    # If no services are found, remove the depends_on block completely
-    sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
-fi
-
-# Start only active services with docker-compose
-if [ ${#active_services[@]} -gt 0 ]; then
-    echo -e "${BLUE}Active services: ${active_services[@]}${NC}"
-    docker-compose up -d --build nginx "${active_services[@]}"
-    echo -e "${GREEN}Docker Compose started successfully with active services.${NC}"
-else
-    echo -e "${RED}No active services found to start with Docker Compose.${NC}"
-fi
-
+# Step 3: Final message after processing all services
+echo -e "${GREEN}All available services have been started successfully.${NC}"
 
 
 # Step 10: Clone repositories into respective folders
