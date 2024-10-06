@@ -219,7 +219,7 @@ for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
 done
 
 # ساخت یک رشته multiline برای استفاده در docker-compose
-depends_on_services=$(printf "  - %s\n" "${active_services[@]}")
+depends_on_services=$(printf "      - %s\n" "${active_services[@]}")
 
 # ایجاد یک فایل موقت برای docker-compose.yml
 docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
@@ -229,9 +229,11 @@ temp_file=$(mktemp)
 if [ -n "$depends_on_services" ]; then
     # خواندن فایل docker-compose.yml و جایگزینی placeholder
     awk -v deps="$depends_on_services" '
-    {gsub(/PLACEHOLDER_DEPENDS_ON_SERVICES/, deps)}
-    {print}
-    ' "$docker_compose_file" > "$temp_file"
+    {if ($0 ~ /PLACEHOLDER_DEPENDS_ON_SERVICES/) {
+        print "    depends_on:"; print deps;
+    } else {
+        print;
+    }}' "$docker_compose_file" > "$temp_file"
 
     # جایگزینی فایل اصلی با فایل موقت
     mv "$temp_file" "$docker_compose_file"
