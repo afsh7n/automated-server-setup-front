@@ -237,8 +237,11 @@ echo -e "${GREEN}All available services have been started successfully.${NC}"
 # مسیر فایل Nginx در سیستم میزبان
 nginx_config_host="/home/deployer/automated-server-setup-front/docker/nginx.conf"
 
+# گرفتن مقدار SERVER_NAME از محیط
+server_name="${SERVER_NAME}"
+
 # محتوای بیسیک کانفیگ Nginx
-base_config='events {
+base_config="events {
     worker_connections 1024;
 }
 
@@ -248,15 +251,14 @@ http {
 
     server {
         listen 80;
-        server_name '${SERVER_NAME}';
+        server_name ${server_name};
 
-    }
-}'
+    "
 
 # نوشتن محتوای بیسیک در فایل nginx.conf
 echo "$base_config" > "$nginx_config_host"
 
-# بررسی و اضافه کردن پراکسی‌ها به فایل nginx.conf
+# بررسی و اضافه کردن پراکسی‌ها به داخل بلاک server
 if docker ps --format '{{.Names}}' | grep -q "onomis-react"; then
     echo "Adding onomis-react to nginx config"
     cat <<EOT >> "$nginx_config_host"
@@ -327,11 +329,15 @@ if docker ps --format '{{.Names}}' | grep -q "onomis"; then
 EOT
 fi
 
+# بستن بلاک server
+echo "   } }" >> "$nginx_config_host"
+
 # ری‌استارت کردن کانتینر Nginx برای اعمال تغییرات
 echo "Restarting Nginx container..."
 docker restart nginx
 
 echo "Nginx configuration updated and reloaded successfully."
+
 
 
 
