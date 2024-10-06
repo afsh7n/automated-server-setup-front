@@ -238,7 +238,7 @@ echo -e "${GREEN}All available services have been started successfully.${NC}"
 nginx_config_host="/home/deployer/automated-server-setup-front/docker/nginx.conf"
 
 # گرفتن مقدار SERVER_NAME از محیط
-server_name="${SERVER_NAME}"
+server_name="emeax.com"
 
 # محتوای بیسیک کانفیگ Nginx
 base_config="events {
