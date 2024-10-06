@@ -206,8 +206,6 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 
 
-#!/bin/bash
-
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
 
 # Services to add in depends_on
@@ -222,19 +220,19 @@ for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
 done
 
 # Join active services into a multiline string for insertion
-depends_on_services=$(printf "      - %s\n" "${active_services[@]}")
+depends_on_services=$(printf "        - %s\n" "${active_services[@]}")
 
 # Replace placeholder in docker-compose.yml
 docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
 
 if [ -n "$depends_on_services" ]; then
     # Check if depends_on already exists in nginx service and update it
-    if grep -q "depends_on:" "$docker_compose_file"; then
-        # Replace the existing depends_on block with the updated one
-        sed -i "/depends_on:/,/^$/c\      depends_on:\n$depends_on_services" "$docker_compose_file"
+    if grep -q "PLACEHOLDER_DEPENDS_ON_SERVICES" "$docker_compose_file"; then
+        # Replace the placeholder with the active services
+        sed -i "/PLACEHOLDER_DEPENDS_ON_SERVICES/c\\        depends_on:\n$depends_on_services" "$docker_compose_file"
     else
         # Add depends_on to nginx service if it doesn't exist
-        sed -i "/nginx:/a\      depends_on:\n$depends_on_services" "$docker_compose_file"
+        sed -i "/nginx:/a\        depends_on:\n$depends_on_services" "$docker_compose_file"
     fi
 else
     # If no services are found, remove the depends_on block completely
@@ -249,7 +247,6 @@ if [ ${#active_services[@]} -gt 0 ]; then
 else
     echo -e "${RED}No active services found to start with Docker Compose.${NC}"
 fi
-
 
 
 
