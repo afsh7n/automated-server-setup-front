@@ -234,8 +234,107 @@ done
 # Step 3: Final message after processing all services
 echo -e "${GREEN}All available services have been started successfully.${NC}"
 
+# مسیر فایل Nginx در سیستم میزبان
+nginx_config_host="/home/deployer/automated-server-setup-front/docker/nginx.conf"
 
-# Step 10: Clone repositories into respective folders
+# محتوای بیسیک کانفیگ Nginx
+base_config='events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;  # شامل شدن MIME types استاندارد
+    default_type  application/octet-stream;
+
+    server {
+        listen 80;
+        server_name '${SERVER_NAME}';
+
+    }
+}'
+
+# نوشتن محتوای بیسیک در فایل nginx.conf
+echo "$base_config" > "$nginx_config_host"
+
+# بررسی و اضافه کردن پراکسی‌ها به فایل nginx.conf
+if docker ps --format '{{.Names}}' | grep -q "onomis-react"; then
+    echo "Adding onomis-react to nginx config"
+    cat <<EOT >> "$nginx_config_host"
+        # Proxy برای Onomis React
+        location /preview/onomis-react/ {
+            proxy_pass http://onomis-react:3000/;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+EOT
+fi
+
+if docker ps --format '{{.Names}}' | grep -q "onomis-vue"; then
+    echo "Adding onomis-vue to nginx config"
+    cat <<EOT >> "$nginx_config_host"
+        # Proxy برای Onomis Vue
+        location /preview/onomis-vue/ {
+            proxy_pass http://onomis-vue:3001/;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+EOT
+fi
+
+if docker ps --format '{{.Names}}' | grep -q "onomis-docs"; then
+    echo "Adding onomis-docs to nginx config"
+    cat <<EOT >> "$nginx_config_host"
+        # Proxy برای Onomis Docs
+        location /preview/onomis-docs/ {
+            proxy_pass http://onomis-docs:3002/;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+EOT
+fi
+
+if docker ps --format '{{.Names}}' | grep -q "emeax"; then
+    echo "Adding emeax to nginx config"
+    cat <<EOT >> "$nginx_config_host"
+        # Proxy برای emeax
+        location / {
+            proxy_pass http://emeax:3003/;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+EOT
+fi
+
+if docker ps --format '{{.Names}}' | grep -q "onomis"; then
+    echo "Adding onomis to nginx config"
+    cat <<EOT >> "$nginx_config_host"
+        # Proxy برای Onomis
+        location /onomis/ {
+            proxy_pass http://onomis:3004/;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+EOT
+fi
+
+# ری‌استارت کردن کانتینر Nginx برای اعمال تغییرات
+echo "Restarting Nginx container..."
+docker restart nginx
+
+echo "Nginx configuration updated and reloaded successfully."
+
+
+
 # Install GitLab Runner (if needed)
 if command -v gitlab-runner &>/dev/null; then
     echo -e "${GREEN}GitLab Runner is already installed. Skipping installation.${NC}"
@@ -246,9 +345,6 @@ else
     echo -e "${GREEN}GitLab Runner installed successfully.${NC}"
 fi
 
-# Step 1: Define the deploy user
-read -p "Please enter the username for the deploy user (default: deployer): " deploy_user
-deploy_user=${deploy_user:-deployer}
 
 # Step 2: Install and configure GitLab Runner as a service
 echo -e "${BLUE}Installing GitLab Runner service for user $deploy_user...${NC}"
