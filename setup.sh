@@ -53,6 +53,7 @@ fi
 echo -e "${BLUE}Starting SSH agent and adding the key...${NC}"
 eval $(ssh-agent -s)
 ssh-add /home/$deploy_user/.ssh/id_rsa
+git config --global --add safe.directory /home/deployer/automated-server-setup-front
 
 read -p "Press enter after you've added the SSH key to GitLab..."
 
@@ -205,12 +206,14 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 
 
+#!/bin/bash
+
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
 
-# Services to start
+# Services to add in depends_on
 declare -a active_services=()
 
-# Check if each project directory exists and is not empty
+# Check if each service is available and should be added to depends_on
 for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
     project_dir="/home/deployer/automated-server-setup-front/src/$project"
     if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
@@ -223,27 +226,16 @@ depends_on_services=$(printf "      - %s\n" "${active_services[@]}")
 
 # Replace placeholder in docker-compose.yml
 docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
-temp_file=$(mktemp)
 
-# If active services exist, replace the placeholder
 if [ -n "$depends_on_services" ]; then
-    # Insert the correct 'depends_on' block with proper formatting
-    awk -v deps="$depends_on_services" '
-    BEGIN {inside_depends = 0}
-    {
-        if ($0 ~ /PLACEHOLDER_DEPENDS_ON_SERVICES/) {
-            print "    depends_on:";
-            print deps;
-            inside_depends = 1;
-        } else if (inside_depends && $0 !~ /^      -/) {
-            inside_depends = 0;
-            print $0;
-        } else if (!inside_depends) {
-            print $0;
-        }
-    }' "$docker_compose_file" > "$temp_file"
-
-    mv "$temp_file" "$docker_compose_file"
+    # Check if depends_on already exists in nginx service and update it
+    if grep -q "depends_on:" "$docker_compose_file"; then
+        # Replace the existing depends_on block with the updated one
+        sed -i "/depends_on:/,/^$/c\      depends_on:\n$depends_on_services" "$docker_compose_file"
+    else
+        # Add depends_on to nginx service if it doesn't exist
+        sed -i "/nginx:/a\      depends_on:\n$depends_on_services" "$docker_compose_file"
+    fi
 else
     # If no services are found, remove the depends_on block completely
     sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
