@@ -207,10 +207,10 @@ echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
 
-# جمع‌آوری سرویس‌های فعال در آرایه active_services
+# Services to start
 declare -a active_services=()
 
-# چک کردن هر پروژه و اضافه کردن به آرایه active_services
+# Check if each project directory exists and is not empty
 for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
     project_dir="/home/deployer/automated-server-setup-front/src/$project"
     if [ -d "$project_dir" ] && [ "$(ls -A $project_dir)" ]; then
@@ -218,34 +218,38 @@ for project in "onomis-react" "onomis-vue" "onomis-docs" "emeax" "onomis"; do
     fi
 done
 
-# ساخت یک رشته multiline برای استفاده در docker-compose
+# Join active services into a multiline string for insertion
 depends_on_services=$(printf "      - %s\n" "${active_services[@]}")
 
-# ایجاد یک فایل موقت برای docker-compose.yml
+# Replace placeholder in docker-compose.yml
 docker_compose_file="/home/deployer/automated-server-setup-front/docker-compose.yml"
 temp_file=$(mktemp)
 
-# اگر سرویس‌ها فعال باشند، placeholder را جایگزین می‌کنیم
+# If active services exist, replace the placeholder
 if [ -n "$depends_on_services" ]; then
-    # خواندن فایل docker-compose.yml و جایگزینی placeholder
+    # Insert the correct 'depends_on' block with proper formatting
     awk -v deps="$depends_on_services" '
-    {if ($0 ~ /PLACEHOLDER_DEPENDS_ON_SERVICES/) {
-        print "    depends_on:"; print deps;
-    } else {
-        print;
-    }}' "$docker_compose_file" > "$temp_file"
+    BEGIN {inside_depends = 0}
+    {
+        if ($0 ~ /PLACEHOLDER_DEPENDS_ON_SERVICES/) {
+            print "    depends_on:";
+            print deps;
+            inside_depends = 1;
+        } else if (inside_depends && $0 !~ /^      -/) {
+            inside_depends = 0;
+            print $0;
+        } else if (!inside_depends) {
+            print $0;
+        }
+    }' "$docker_compose_file" > "$temp_file"
 
-    # جایگزینی فایل اصلی با فایل موقت
     mv "$temp_file" "$docker_compose_file"
 else
-    # اگر سرویسی پیدا نشد، بخش depends_on را حذف کن
+    # If no services are found, remove the depends_on block completely
     sed -i '/depends_on:/,/PLACEHOLDER_DEPENDS_ON_SERVICES/d' "$docker_compose_file"
 fi
 
-# حذف فایل موقت
-rm -f "$temp_file"
-
-# اجرای Docker Compose برای سرویس‌های فعال
+# Start only active services with docker-compose
 if [ ${#active_services[@]} -gt 0 ]; then
     echo -e "${BLUE}Active services: ${active_services[@]}${NC}"
     docker-compose up -d --build nginx "${active_services[@]}"
