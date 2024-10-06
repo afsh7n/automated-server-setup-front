@@ -193,7 +193,7 @@ if grep -q "Port 23232" /etc/ssh/sshd_config; then
 else
     echo -e "${BLUE}Changing SSH port to 23232...${NC}"
     sudo sed -i 's/#Port 22/Port 23232/' /etc/ssh/sshd_config
-    sudo systemctl restart ssh
+    sudo service ssh restart
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
