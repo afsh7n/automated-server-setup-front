@@ -14,7 +14,6 @@ WORKDIR /usr/src/app
 # Echo the folder name for debugging
 RUN echo "Building folder: ${FOLDER_NAME}"
 
-
 # Install Yarn globally
 RUN npm install -g yarn --force
 
@@ -29,17 +28,8 @@ COPY ./../src/${FOLDER_NAME}/. .
 # Build the project
 RUN yarn build
 
-# Install serve globally
-RUN npm install -g serve
-
-# Copy the start.sh script
-COPY ./docker/start.sh .
-
-# Ensure the script has executable permissions
-RUN chmod +x start.sh
-
 # Expose the port the project will be served on
 EXPOSE ${PORT}
 
-# Run the start.sh script to serve the build
-CMD ["./start.sh"]
+# Use yarn preview to serve the build
+CMD ["yarn", "preview", "--port", "${PORT}", "--host"]
