@@ -32,4 +32,4 @@ RUN yarn build
 EXPOSE ${PORT}
 
 # Use yarn preview to serve the build
-CMD ["yarn", "preview", "--port", "${PORT}", "--host"]
+CMD yarn preview --port $PORT --host
