@@ -172,6 +172,7 @@ if [ -f "/home/$deploy_user/.bash_logout" ]; then
     echo -e "${GREEN}.bash_logout file has been removed successfully.${NC}"
 fi
 
+
 # Step 8: Change SSH port to 23232 and configure UFW
 
 # Check if ufw is installed and install it if necessary
@@ -197,17 +198,37 @@ if grep -q "Port 23232" /etc/ssh/sshd_config; then
     echo -e "${GREEN}SSH port is already set to 23232. Skipping this step.${NC}"
 else
     echo -e "${BLUE}Changing SSH port to 23232...${NC}"
-    sudo sed -i 's/#Port 22/Port 23232/' /etc/ssh/sshd_config
+    if grep -q "^Port 22" /etc/ssh/sshd_config; then
+        sudo sed -i 's/^Port 22/Port 23232/' /etc/ssh/sshd_config
+    else
+        echo "Port 23232" | sudo tee -a /etc/ssh/sshd_config
+    fi
     sudo service ssh restart
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
 # Configure UFW to allow port 23232 for SSH and deny port 22
-echo -e "${BLUE}Configuring UFW to allow SSH on port 23232 and deny port 22...${NC}"
-sudo ufw allow 23232/tcp
-sudo ufw deny 22/tcp
+
+# Check if port 23232 is already allowed
+if sudo ufw status | grep -qw "23232/tcp"; then
+    echo -e "${GREEN}Port 23232 is already allowed in UFW.${NC}"
+else
+    echo -e "${BLUE}Allowing port 23232 in UFW for SSH...${NC}"
+    sudo ufw allow 23232/tcp
+fi
+
+# Check if port 22 is already denied
+if sudo ufw status | grep -qw "22/tcp.*DENY"; then
+    echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
+else
+    echo -e "${BLUE}Denying port 22 in UFW...${NC}"
+    sudo ufw deny 22/tcp
+fi
+
+# Reload UFW to apply changes
 sudo ufw reload
 echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
+
 
 
 
