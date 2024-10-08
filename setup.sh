@@ -48,11 +48,15 @@ else
 
     echo -e "${BLUE}Here is the SSH public key. Please add it to your GitLab account:${NC}"
     cat /home/$deploy_user/.ssh/id_rsa.pub
+    echo -e "------------------------------------------------------------------------------"
+    echo -e "${BLUE}Here is the SSH Private key. Please add it to your Variable Ci Cd setting:${NC}"
+    cat /home/$deploy_user/.ssh/id_rsa
 fi
 
 echo -e "${BLUE}Starting SSH agent and adding the key...${NC}"
 eval $(ssh-agent -s)
 ssh-add /home/$deploy_user/.ssh/id_rsa
+sudo -u $deploy_user bash -c 'eval $(ssh-agent -s) && ssh-add /home/$deploy_user/.ssh/id_rsa'
 git config --global --add safe.directory /home/deployer/automated-server-setup-front
 
 read -p "Press enter after you've added the SSH key to GitLab..."
