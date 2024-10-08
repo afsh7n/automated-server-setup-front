@@ -126,7 +126,8 @@ for project_name in "onomis-react" "onomis-vue"; do
     vite_config_path="$folder_path/vite.config.js"
 
     if [ -f "$vite_config_path" ]; then
-        echo -e "${BLUE}Adding base configuration to $vite_config_path for $project_name...${NC}"
+        echo -e "${BLUE}Updating base configuration in $vite_config_path for $project_name...${NC}"
+
         # Determine the correct base URL based on the project name
         if [[ "$project_name" == "onomis-react" ]]; then
             base_line="base: '/preview/onomis-react/',"
@@ -134,14 +135,18 @@ for project_name in "onomis-react" "onomis-vue"; do
             base_line="base: '/preview/onomis-vue/',"
         fi
 
-        # Insert the base line after 'defineConfig({'
+        # Remove any existing base line to avoid duplication
+        sed -i "/base: '\/preview\/$project_name\/',/d" "$vite_config_path"
+
+        # Insert the new base line after 'defineConfig({'
         sed -i "/defineConfig({/a \  $base_line" "$vite_config_path"
 
-        echo -e "${GREEN}Base configuration added successfully to $vite_config_path.${NC}"
+        echo -e "${GREEN}Base configuration updated successfully in $vite_config_path.${NC}"
     else
         echo -e "${RED}vite.config.js not found for $project_name. Skipping base configuration.${NC}"
     fi
 done
+
 
 # Step 5: Install Docker (if needed)
 if command -v docker &>/dev/null; then
@@ -171,6 +176,7 @@ if [ -f "/home/$deploy_user/.bash_logout" ]; then
     echo -e "${GREEN}.bash_logout file has been removed successfully.${NC}"
 fi
 
+
 # Step 8: Change SSH port to 23232 and configure UFW
 
 # Check if ufw is installed and install it if necessary
@@ -196,17 +202,37 @@ if grep -q "Port 23232" /etc/ssh/sshd_config; then
     echo -e "${GREEN}SSH port is already set to 23232. Skipping this step.${NC}"
 else
     echo -e "${BLUE}Changing SSH port to 23232...${NC}"
-    sudo sed -i 's/#Port 22/Port 23232/' /etc/ssh/sshd_config
+    if grep -q "^Port 22" /etc/ssh/sshd_config; then
+        sudo sed -i 's/^Port 22/Port 23232/' /etc/ssh/sshd_config
+    else
+        echo "Port 23232" | sudo tee -a /etc/ssh/sshd_config
+    fi
     sudo service ssh restart
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
 # Configure UFW to allow port 23232 for SSH and deny port 22
-echo -e "${BLUE}Configuring UFW to allow SSH on port 23232 and deny port 22...${NC}"
-sudo ufw allow 23232/tcp
-sudo ufw deny 22/tcp
+
+# Check if port 23232 is already allowed
+if sudo ufw status | grep -qw "23232/tcp"; then
+    echo -e "${GREEN}Port 23232 is already allowed in UFW.${NC}"
+else
+    echo -e "${BLUE}Allowing port 23232 in UFW for SSH...${NC}"
+    sudo ufw allow 23232/tcp
+fi
+
+# Check if port 22 is already denied
+if sudo ufw status | grep -qw "22/tcp.*DENY"; then
+    echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
+else
+    echo -e "${BLUE}Denying port 22 in UFW...${NC}"
+    sudo ufw deny 22/tcp
+fi
+
+# Reload UFW to apply changes
 sudo ufw reload
 echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
+
 
 
 
@@ -267,7 +293,7 @@ if docker ps --format '{{.Names}}' | grep -q "onomis-react"; then
     cat <<EOT >> "$nginx_config_host"
         # Proxy برای Onomis React
         location /preview/onomis-react/ {
-            proxy_pass http://onomis-react:3000/;
+            proxy_pass http://localhost:3000/preview/onomis-react/;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -281,7 +307,7 @@ if docker ps --format '{{.Names}}' | grep -q "onomis-vue"; then
     cat <<EOT >> "$nginx_config_host"
         # Proxy برای Onomis Vue
         location /preview/onomis-vue/ {
-            proxy_pass http://onomis-vue:3001/;
+            proxy_pass http://localhost:3001/preview/onomis-vue/;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;

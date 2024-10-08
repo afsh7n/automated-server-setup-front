@@ -29,17 +29,11 @@ COPY ./../src/${FOLDER_NAME}/. .
 # Build the project
 RUN yarn docs:build
 
-# Install serve globally
-RUN npm install -g serve
-
-# Copy the start.sh script
-COPY ./docker/start.sh .
-
-# Ensure the script has executable permissions
-RUN chmod +x start.sh
+# Build the project
+RUN yarn build
 
 # Expose the port the project will be served on
 EXPOSE ${PORT}
 
-# Run the start.sh script to serve the build from .vitepress/dist
-CMD ["./start.sh"]
+# Use yarn preview to serve the build
+CMD yarn docs:preview --port $PORT --host

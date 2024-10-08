@@ -28,17 +28,8 @@ COPY ./../src/${FOLDER_NAME}/. .
 # Build the project
 RUN yarn build
 
-# Install serve to serve static files
-RUN npm install -g serve
-
-# Copy the start script to the container
-COPY ./docker/start.sh /usr/src/app/start.sh
-
-# Make the start script executable
-RUN chmod +x /usr/src/app/start.sh
-
-# Expose the port serve will run on
+# Expose the port the project will be served on
 EXPOSE ${PORT}
 
-# Use the start script to serve the app
-CMD ["/usr/src/app/start.sh"]
+# Use yarn preview to serve the build
+CMD yarn preview --port $PORT --host
