@@ -89,6 +89,9 @@ for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     folder_path="$src_directory/$folder_name"
 
+    echo -e "-------------------------------${$project_name}-------------------------------------"
+    echo -e "${BLUE}Here is the SSH Private key. Please add it to your Variable Ci Cd setting:${NC}"
+    cat /home/$deploy_user/.ssh/id_rsa
     read -p "Please enter your GitLab repository URL for $project_name (leave empty if you don't want to set this project): " repo_url
     if [[ -z "$repo_url" ]]; then
         echo -e "${YELLOW}Skipping setup for $project_name as no URL was provided.${NC}"
@@ -214,19 +217,19 @@ fi
 # Configure UFW to allow port 23232 for SSH and deny port 22
 
 # Check if port 23232 is already allowed
-if sudo ufw status | grep -qw "23232/tcp"; then
+if sudo ufw status | grep -qw "23232"; then
     echo -e "${GREEN}Port 23232 is already allowed in UFW.${NC}"
 else
     echo -e "${BLUE}Allowing port 23232 in UFW for SSH...${NC}"
-    sudo ufw allow 23232/tcp
+    sudo ufw allow 23232
 fi
 
 # Check if port 22 is already denied
-if sudo ufw status | grep -qw "22/tcp.*DENY"; then
+if sudo ufw status | grep -qw "22.*DENY"; then
     echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
 else
     echo -e "${BLUE}Denying port 22 in UFW...${NC}"
-    sudo ufw deny 22/tcp
+    sudo ufw deny 22
 fi
 
 # Reload UFW to apply changes
