@@ -183,6 +183,7 @@ fi
 # Step 8: Change SSH port to 23232 and configure UFW
 
 # Check if ufw is installed and install it if necessary
+# Step 1: Install UFW if necessary
 if command -v ufw &>/dev/null; then
     echo -e "${GREEN}UFW is already installed. Skipping installation.${NC}"
 else
@@ -191,7 +192,7 @@ else
     echo -e "${GREEN}UFW installed successfully.${NC}"
 fi
 
-# Enable UFW if it is not enabled already
+# Step 2: Enable UFW if inactive
 if sudo ufw status | grep -q "inactive"; then
     echo -e "${BLUE}Enabling UFW...${NC}"
     sudo ufw enable
@@ -200,7 +201,16 @@ else
     echo -e "${GREEN}UFW is already active.${NC}"
 fi
 
-# Change SSH port to 23232 if not already set
+# Step 3: Open port 23232 in UFW first
+if sudo ufw status | grep -qw "23232"; then
+    echo -e "${GREEN}Port 23232 is already allowed in UFW.${NC}"
+else
+    echo -e "${BLUE}Allowing port 23232 in UFW for SSH...${NC}"
+    sudo ufw allow 23232
+    sudo ufw reload
+fi
+
+# Step 4: Change SSH port to 23232 if not already set
 if grep -q "Port 23232" /etc/ssh/sshd_config; then
     echo -e "${GREEN}SSH port is already set to 23232. Skipping this step.${NC}"
 else
@@ -214,28 +224,32 @@ else
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
-# Configure UFW to allow port 23232 for SSH and deny port 22
+# Step 5: Automatically test SSH connection on port 23232
+echo -e "${BLUE}Testing SSH connection on port 23232...${NC}"
 
-# Check if port 23232 is already allowed
-if sudo ufw status | grep -qw "23232"; then
-    echo -e "${GREEN}Port 23232 is already allowed in UFW.${NC}"
+# Extract the current server IP
+server_ip=$(hostname -I | awk '{print $1}')
+
+# Test SSH connection using a 5-second timeout (replace 'your_user' with the actual username)
+ssh -p 23232 -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no your_user@$server_ip exit
+
+# Check if the SSH connection was successful
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}SSH connection on port 23232 successful!${NC}"
+
+    # Step 6: Deny port 22 in UFW after confirming connection on port 23232
+    if sudo ufw status | grep -qw "22.*DENY"; then
+        echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
+    else
+        echo -e "${BLUE}Denying port 22 in UFW...${NC}"
+        sudo ufw deny 22
+        sudo ufw reload
+    fi
+
+    echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 else
-    echo -e "${BLUE}Allowing port 23232 in UFW for SSH...${NC}"
-    sudo ufw allow 23232
+    echo -e "${RED}Failed to establish SSH connection on port 23232. Keeping port 22 open.${NC}"
 fi
-
-# Check if port 22 is already denied
-if sudo ufw status | grep -qw "22.*DENY"; then
-    echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
-else
-    echo -e "${BLUE}Denying port 22 in UFW...${NC}"
-    sudo ufw deny 22
-fi
-
-# Reload UFW to apply changes
-sudo ufw reload
-echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
-
 
 
 
