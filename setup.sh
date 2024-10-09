@@ -89,7 +89,7 @@ for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     folder_path="$src_directory/$folder_name"
 
-    echo -e "-------------------------------${$project_name}-------------------------------------"
+    echo -e "-------------------------------${project_name}-------------------------------------"
     echo -e "${BLUE}Here is the SSH Private key. Please add it to your Variable Ci Cd setting:${NC}"
     cat /home/$deploy_user/.ssh/id_rsa
     read -p "Please enter your GitLab repository URL for $project_name (leave empty if you don't want to set this project): " repo_url
