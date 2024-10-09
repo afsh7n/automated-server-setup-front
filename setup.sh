@@ -56,7 +56,7 @@ fi
 echo -e "${BLUE}Starting SSH agent and adding the key...${NC}"
 eval $(ssh-agent -s)
 ssh-add /home/$deploy_user/.ssh/id_rsa
-sudo -u $deploy_user bash -c "eval $(ssh-agent -s) && ssh-add /home/$deploy_user/.ssh/id_rsa"
+sudo -u $deploy_user bash -c 'eval "$(ssh-agent -s)" && ssh-add /home/'"$deploy_user"'/.ssh/id_rsa'
 git config --global --add safe.directory /home/deployer/automated-server-setup-front
 
 read -p "Press enter after you've added the SSH key to GitLab..."
