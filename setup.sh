@@ -267,6 +267,7 @@ for service in "${services[@]}"; do
         echo -e "${GREEN}Service $service found. Starting...${NC}"
         # Start the specific service
         docker-compose up -d --build $service
+        sleep 5
     else
         echo -e "${RED}Service $service not found or directory is empty. Skipping...${NC}"
     fi
@@ -274,6 +275,7 @@ done
 
 # Step 3: Final message after processing all services
 echo -e "${GREEN}All available services have been started successfully.${NC}"
+sleep 10  # Wait for 10 seconds before proceeding with Nginx configuration
 
 # مسیر فایل Nginx در سیستم میزبان
 nginx_config_host="/home/deployer/automated-server-setup-front/docker/nginx.conf"
