@@ -277,16 +277,16 @@ done
 echo -e "${GREEN}All available services have been started successfully.${NC}"
 sleep 10  # Wait for 10 seconds before proceeding with Nginx configuration
 
-# مسیر فایل Nginx در سیستم میزبان
+# Nginx configuration file path
 nginx_config_host="/home/deployer/automated-server-setup-front/docker/nginx.conf"
 
-# محتوای بیسیک کانفیگ Nginx
+# Base Nginx configuration
 base_config="events {
     worker_connections 1024;
 }
 
 http {
-    include       /etc/nginx/mime.types;  # شامل شدن MIME types استاندارد
+    include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
 
     server {
@@ -295,111 +295,87 @@ http {
 
     "
 
-# نوشتن محتوای بیسیک در فایل nginx.conf
+# Write base configuration to nginx.conf
 echo "$base_config" > "$nginx_config_host"
 
-# بررسی و اضافه کردن پراکسی‌ها به داخل بلاک server
+# Function to check if a container is running
+function is_container_running() {
+    local service_name="$1"
+    docker inspect -f '{{.State.Running}}' "$service_name" 2>/dev/null
+}
 
-# برای هر سرویس ابتدا بررسی کنید که کانتینر بالا است و سرویس در دسترس است
+# Function to get container IP address
+function get_container_ip() {
+    local service_name="$1"
+    docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$service_name" 2>/dev/null
+}
 
-# Proxy برای Onomis React
-if docker ps --format '{{.Names}}' | grep -q "onomis-react"; then
-    if curl -s --head --request GET http://onomis-react:3000/ | grep "200 OK" > /dev/null; then
-        echo "Adding onomis-react to nginx config"
-        cat <<EOT >> "$nginx_config_host"
-        location /preview/onomis-react/ {
-            proxy_pass http://onomis-react:3000/;
+# Function to check if a service is accessible
+function is_service_accessible() {
+    local service_name="$1"
+    local port="$2"
+
+    container_ip=$(get_container_ip "$service_name")
+    if [ -z "$container_ip" ]; then
+        return 1
+    fi
+
+    curl -s --head --request GET "http://$container_ip:$port/" | grep "200 OK" > /dev/null
+}
+
+# Function to add location block to Nginx config
+function add_nginx_location() {
+    local service_name="$1"
+    local port="$2"
+    local location="$3"
+
+    cat <<EOT >> "$nginx_config_host"
+        location $location {
+            proxy_pass http://$service_name:$port/;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto \$scheme;
         }
 EOT
-    else
-        echo "onomis-react is not accessible, skipping..."
-    fi
-fi
+}
 
-# Proxy برای Onomis Vue
-if docker ps --format '{{.Names}}' | grep -q "onomis-vue"; then
-    if curl -s --head --request GET http://onomis-vue:3001/ | grep "200 OK" > /dev/null; then
-        echo "Adding onomis-vue to nginx config"
-        cat <<EOT >> "$nginx_config_host"
-        location /preview/onomis-vue/ {
-            proxy_pass http://onomis-vue:3001/;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-EOT
-    else
-        echo "onomis-vue is not accessible, skipping..."
-    fi
-fi
+# List of services, ports, and their respective locations
+declare -A services_and_locations=(
+    ["onomis-react"]="3000:/preview/onomis-react/"
+    ["onomis-vue"]="3001:/preview/onomis-vue/"
+    ["onomis-docs"]="3002:/preview/onomis-docs/"
+    ["emeax"]="3003:/"
+    ["onomis"]="3004:/onomis/"
+)
 
-# Proxy برای Onomis Docs
-if docker ps --format '{{.Names}}' | grep -q "onomis-docs"; then
-    if curl -s --head --request GET http://onomis-docs:3002/ | grep "200 OK" > /dev/null; then
-        echo "Adding onomis-docs to nginx config"
-        cat <<EOT >> "$nginx_config_host"
-        location /preview/onomis-docs/ {
-            proxy_pass http://onomis-docs:3002/;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-EOT
-    else
-        echo "onomis-docs is not accessible, skipping..."
-    fi
-fi
+# Loop through each service and check its availability
+for service_name in "${!services_and_locations[@]}"; do
+    port_and_location=(${services_and_locations[$service_name]//:/ }) # Split port and location
+    port="${port_and_location[0]}"
+    location="${port_and_location[1]}"
 
-# Proxy برای emeax
-if docker ps --format '{{.Names}}' | grep -q "emeax"; then
-    if curl -s --head --request GET http://emeax:3003/ | grep "200 OK" > /dev/null; then
-        echo "Adding emeax to nginx config"
-        cat <<EOT >> "$nginx_config_host"
-        location / {
-            proxy_pass http://emeax:3003/;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-EOT
+    if is_container_running "$service_name" | grep -q "true"; then
+        echo -e "${GREEN}Checking ${service_name} availability...${NC}"
+        if is_service_accessible "$service_name" "$port"; then
+            echo -e "${GREEN}Adding ${service_name} to Nginx config...${NC}"
+            add_nginx_location "$service_name" "$port" "$location"
+        else
+            echo -e "${RED}${service_name} is not accessible, skipping...${NC}"
+        fi
     else
-        echo "emeax is not accessible, skipping..."
+        echo -e "${RED}Container ${service_name} is not running, skipping...${NC}"
     fi
-fi
+done
 
-# Proxy برای Onomis
-if docker ps --format '{{.Names}}' | grep -q "onomis"; then
-    if curl -s --head --request GET http://onomis:3004/ | grep "200 OK" > /dev/null; then
-        echo "Adding onomis to nginx config"
-        cat <<EOT >> "$nginx_config_host"
-        location /onomis/ {
-            proxy_pass http://onomis:3004/;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-EOT
-    else
-        echo "onomis is not accessible, skipping..."
-    fi
-fi
-
-# بستن بلاک server
+# Closing Nginx server block
 echo "   } }" >> "$nginx_config_host"
 
-# ری‌استارت کردن کانتینر Nginx برای اعمال تغییرات
-echo "Restarting Nginx container..."
+# Restart Nginx container to apply changes
+echo -e "${BLUE}Restarting Nginx container...${NC}"
 docker restart nginx
 
-echo "Nginx configuration updated and reloaded successfully."
+echo -e "${GREEN}Nginx configuration updated and reloaded successfully.${NC}"
 
 
 
