@@ -437,6 +437,12 @@ done
 
 chmod 777 -R /home/deployer/automated-server-setup-front/src
 
+sudo systemctl restart ssh
+
+sleep 5
+
+sudo systemctl restart ssh
+
 echo -e "${GREEN}Setup complete!${NC}"
 
 
