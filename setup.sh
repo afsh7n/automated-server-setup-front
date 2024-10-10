@@ -435,6 +435,8 @@ for project_name in "${!project_urls[@]}"; do
     fi
 done
 
+chmod 777 -R /home/deployer/automated-server-setup-front/src
+
 echo -e "${GREEN}Setup complete!${NC}"
 
 
