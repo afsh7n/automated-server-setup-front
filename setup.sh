@@ -302,7 +302,7 @@ function is_container_running() {
     docker inspect -f '{{.State.Running}}' "$service_name" 2>/dev/null | grep "true"
 }
 
-# تابع برای اضافه کردن location block به فایل Nginx
+# Sample part of Nginx configuration generation in script
 function add_nginx_location() {
     local service_name="$1"
     local port="$2"
@@ -310,11 +310,12 @@ function add_nginx_location() {
 
     cat <<EOT >> "$nginx_config_host"
         location $location {
-            proxy_pass http://$service_name:$port/;
+            proxy_pass http://$service_name:$port$location;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto \$scheme;
+            proxy_redirect off;
         }
 EOT
 }
