@@ -295,6 +295,13 @@ http {
 # نوشتن محتوای بیسیک در فایل nginx.conf
 echo "$base_config" > "$nginx_config_host"
 
+# تابع برای بررسی وضعیت کانتینر
+function is_container_running() {
+    local service_name="$1"
+    # بررسی وضعیت واقعی کانتینر از طریق docker inspect
+    docker inspect -f '{{.State.Running}}' "$service_name" 2>/dev/null | grep "true"
+}
+
 # تابع برای اضافه کردن location block به فایل Nginx
 function add_nginx_location() {
     local service_name="$1"
@@ -327,12 +334,16 @@ for service_name in "${!services_and_ports[@]}"; do
     port="${port_and_location[0]}"
     location="${port_and_location[1]}"
 
-    if docker ps --format '{{.Names}}' | grep -w "$service_name"; then  # استفاده از grep -w برای مطابقت کامل
-        echo -e "${GREEN}Container $service_name is running.${NC}"
-        echo -e "${GREEN}Adding $service_name to Nginx config...${NC}"
-        add_nginx_location "$service_name" "$port" "$location"
+    if docker ps --format '{{.Names}}' | grep -w "$service_name"; then  # بررسی اگر کانتینر به صورت دقیق وجود دارد
+        if is_container_running "$service_name"; then
+            echo -e "${GREEN}Container $service_name is running.${NC}"
+            echo -e "${GREEN}Adding $service_name to Nginx config...${NC}"
+            add_nginx_location "$service_name" "$port" "$location"
+        else
+            echo -e "${RED}Container $service_name is not running, skipping...${NC}"
+        fi
     else
-        echo -e "${RED}Container $service_name is not running, skipping...${NC}"
+        echo -e "${RED}Container $service_name is not running or does not exist, skipping...${NC}"
     fi
 done
 
