@@ -327,7 +327,7 @@ for service_name in "${!services_and_ports[@]}"; do
     port="${port_and_location[0]}"
     location="${port_and_location[1]}"
 
-    if docker ps --format '{{.Names}}' | grep -q "$service_name"; then
+    if docker ps --format '{{.Names}}' | grep -w "$service_name"; then  # استفاده از grep -w برای مطابقت کامل
         echo -e "${GREEN}Container $service_name is running.${NC}"
         echo -e "${GREEN}Adding $service_name to Nginx config...${NC}"
         add_nginx_location "$service_name" "$port" "$location"
