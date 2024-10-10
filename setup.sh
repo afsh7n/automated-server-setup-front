@@ -274,17 +274,10 @@ for service in "${services[@]}"; do
 done
 
 # Step 3: Final message after processing all services
-# Final message after processing all services
-echo -e "${GREEN}All available services have been started successfully.${NC}"
-
-# Wait for services to fully start
-echo -e "${BLUE}Waiting for services to be fully up...${NC}"
-sleep 10  # Wait for 10 seconds before proceeding with Nginx configuration
-
-# Nginx configuration file path
+# مسیر فایل Nginx در سیستم میزبان
 nginx_config_host="/home/deployer/automated-server-setup-front/docker/nginx.conf"
 
-# Base Nginx configuration
+# محتوای بیسیک کانفیگ Nginx
 base_config="events {
     worker_connections 1024;
 }
@@ -299,53 +292,15 @@ http {
 
     "
 
-# Write base configuration to nginx.conf
-echo -e "${BLUE}Writing base configuration to $nginx_config_host...${NC}"
+# نوشتن محتوای بیسیک در فایل nginx.conf
 echo "$base_config" > "$nginx_config_host"
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Failed to write base configuration to $nginx_config_host.${NC}"
-    exit 1
-else
-    echo -e "${GREEN}Base configuration written successfully.${NC}"
-fi
 
-# Function to check if a container is running using docker ps
-is_container_running() {
-    local service_name="$1"
-    echo -e "${BLUE}Checking if container $service_name is running...${NC}"
-    docker ps --format '{{.Names}}' | grep -q "$service_name"
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Container $service_name is running.${NC}"
-        return 0
-    else
-        echo -e "${RED}Container $service_name is not running.${NC}"
-        return 1
-    fi
-}
-
-# Function to check if a service is accessible
-is_service_accessible() {
-    local service_name="$1"
-    local port="$2"
-
-    echo -e "${BLUE}Getting IP address of container $service_name...${NC}"
-    container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$service_name" 2>/dev/null)
-    if [ -z "$container_ip" ]; then
-        echo -e "${RED}Failed to get IP address for $service_name.${NC}"
-        return 1
-    fi
-
-    echo -e "${BLUE}Checking if $service_name on port $port is accessible...${NC}"
-    curl -s --head --request GET "http://$container_ip:$port/" | grep "200 OK" > /dev/null
-}
-
-# Function to add location block to Nginx config
-add_nginx_location() {
+# تابع برای اضافه کردن location block به فایل Nginx
+function add_nginx_location() {
     local service_name="$1"
     local port="$2"
     local location="$3"
 
-    echo -e "${BLUE}Adding location block for $service_name at $location in Nginx config...${NC}"
     cat <<EOT >> "$nginx_config_host"
         location $location {
             proxy_pass http://$service_name:$port/;
@@ -355,16 +310,10 @@ add_nginx_location() {
             proxy_set_header X-Forwarded-Proto \$scheme;
         }
 EOT
-
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to add location block for $service_name in Nginx config.${NC}"
-    else
-        echo -e "${GREEN}Location block for $service_name added successfully.${NC}"
-    fi
 }
 
-# List of services, ports, and their respective locations
-declare -A services_and_locations=(
+# لیستی از سرویس‌ها و پورت‌های مرتبط با آنها
+declare -A services_and_ports=(
     ["onomis-react"]="3000:/preview/onomis-react/"
     ["onomis-vue"]="3001:/preview/onomis-vue/"
     ["onomis-docs"]="3002:/preview/onomis-docs/"
@@ -372,59 +321,29 @@ declare -A services_and_locations=(
     ["onomis"]="3004:/onomis/"
 )
 
-# Function to check if a container is running using docker ps
-is_container_running() {
-    local service_name="$1"
-    echo -e "${BLUE}Checking if container $service_name is running...${NC}"
-    docker ps --format '{{.Names}}' | grep -q "$service_name"
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Container $service_name is running.${NC}"
-        return 0
-    else
-        echo -e "${RED}Container $service_name is not running.${NC}"
-        return 1
-    fi
-}
-
-# Loop through each service and check its availability
-for service_name in "${!services_and_locations[@]}"; do
-    port_and_location=(${services_and_locations[$service_name]//:/ }) # Split port and location
+# بررسی هر سرویس و اضافه کردن آن به فایل Nginx در صورت اجرا بودن
+for service_name in "${!services_and_ports[@]}"; do
+    port_and_location=(${services_and_ports[$service_name]//:/ })  # پورت و مسیر را جدا می‌کنیم
     port="${port_and_location[0]}"
     location="${port_and_location[1]}"
 
-    if is_container_running "$service_name"; then
-        echo -e "${GREEN}Checking ${service_name} availability...${NC}"
-
-        if is_service_accessible "$service_name" "$port"; then
-            echo -e "${GREEN}Service $service_name is accessible on port $port.${NC}"
-            add_nginx_location "$service_name" "$port" "$location"
-        else
-            echo -e "${RED}Service $service_name is not accessible on port $port, skipping...${NC}"
-        fi
+    if docker ps --format '{{.Names}}' | grep -q "$service_name"; then
+        echo -e "${GREEN}Container $service_name is running.${NC}"
+        echo -e "${GREEN}Adding $service_name to Nginx config...${NC}"
+        add_nginx_location "$service_name" "$port" "$location"
+    else
+        echo -e "${RED}Container $service_name is not running, skipping...${NC}"
     fi
 done
 
-
-# Closing Nginx server block
-echo -e "${BLUE}Closing Nginx server block...${NC}"
+# بستن بلاک server
 echo "   } }" >> "$nginx_config_host"
 
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Failed to close Nginx config.${NC}"
-else
-    echo -e "${GREEN}Nginx config closed successfully.${NC}"
-fi
-
-# Restart Nginx container to apply changes
-echo -e "${BLUE}Restarting Nginx container...${NC}"
+# ری‌استارت کردن کانتینر Nginx برای اعمال تغییرات
+echo -e "${GREEN}Restarting Nginx container...${NC}"
 docker restart nginx
 
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Failed to restart Nginx container.${NC}"
-else
-    echo -e "${GREEN}Nginx configuration updated and reloaded successfully.${NC}"
-fi
-
+echo -e "${GREEN}Nginx configuration updated and reloaded successfully.${NC}"
 
 
 
