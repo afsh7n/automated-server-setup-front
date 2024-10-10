@@ -354,7 +354,7 @@ for service_name in "${!services_and_locations[@]}"; do
     location="${port_and_location[1]}"
 
     # Check if container is running
-    if is_container_running "$service_name" | grep -q "true"; then
+    if [ "$(is_container_running "$service_name")" == "true" ]; then
         echo -e "${GREEN}Checking ${service_name} availability...${NC}"
 
         # Check if service is accessible
