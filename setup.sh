@@ -221,6 +221,9 @@ else
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
+sleep 5
+sudo systemctl restart ssh
+
 # Test if port 23232 is listening using netcat
 echo -e "${BLUE}Testing if SSH is listening on port 23232...${NC}"
 server_ip=$(hostname -I | awk '{print $1}')
