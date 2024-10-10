@@ -274,6 +274,7 @@ for service in "${services[@]}"; do
 done
 
 # Step 3: Final message after processing all services
+# Final message after processing all services
 echo -e "${GREEN}All available services have been started successfully.${NC}"
 sleep 10  # Wait for 10 seconds before proceeding with Nginx configuration
 
@@ -312,13 +313,8 @@ function get_container_ip() {
 
 # Function to check if a service is accessible
 function is_service_accessible() {
-    local service_name="$1"
+    local container_ip="$1"
     local port="$2"
-
-    container_ip=$(get_container_ip "$service_name")
-    if [ -z "$container_ip" ]; then
-        return 1
-    fi
 
     curl -s --head --request GET "http://$container_ip:$port/" | grep "200 OK" > /dev/null
 }
@@ -355,9 +351,15 @@ for service_name in "${!services_and_locations[@]}"; do
     port="${port_and_location[0]}"
     location="${port_and_location[1]}"
 
+    # Check if container is running
     if is_container_running "$service_name" | grep -q "true"; then
         echo -e "${GREEN}Checking ${service_name} availability...${NC}"
-        if is_service_accessible "$service_name" "$port"; then
+
+        # Get container IP
+        container_ip=$(get_container_ip "$service_name")
+
+        # If container IP is found, check if the service is accessible
+        if [ -n "$container_ip" ] && is_service_accessible "$container_ip" "$port"; then
             echo -e "${GREEN}Adding ${service_name} to Nginx config...${NC}"
             add_nginx_location "$service_name" "$port" "$location"
         else
@@ -376,6 +378,7 @@ echo -e "${BLUE}Restarting Nginx container...${NC}"
 docker restart nginx
 
 echo -e "${GREEN}Nginx configuration updated and reloaded successfully.${NC}"
+
 
 
 
