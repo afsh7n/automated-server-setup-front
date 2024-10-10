@@ -309,11 +309,18 @@ else
     echo -e "${GREEN}Base configuration written successfully.${NC}"
 fi
 
-# Function to check if a container is running
+# Function to check if a container is running using docker ps
 is_container_running() {
     local service_name="$1"
     echo -e "${BLUE}Checking if container $service_name is running...${NC}"
-    docker inspect -f '{{.State.Running}}' "$service_name" 2>/dev/null
+    docker ps --format '{{.Names}}' | grep -q "$service_name"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Container $service_name is running.${NC}"
+        return 0
+    else
+        echo -e "${RED}Container $service_name is not running.${NC}"
+        return 1
+    fi
 }
 
 # Function to check if a service is accessible
@@ -372,8 +379,8 @@ for service_name in "${!services_and_locations[@]}"; do
     location="${port_and_location[1]}"
 
     # Check if container is running
-    if [ "$(is_container_running "$service_name")" == "true" ]; then
-        echo -e "${GREEN}Container $service_name is running.${NC}"
+    if is_container_running "$service_name"; then
+        echo -e "${GREEN}Checking ${service_name} availability...${NC}"
 
         # Check if service is accessible
         if is_service_accessible "$service_name" "$port"; then
@@ -382,8 +389,6 @@ for service_name in "${!services_and_locations[@]}"; do
         else
             echo -e "${RED}Service $service_name is not accessible on port $port, skipping...${NC}"
         fi
-    else
-        echo -e "${RED}Container $service_name is not running, skipping...${NC}"
     fi
 done
 
