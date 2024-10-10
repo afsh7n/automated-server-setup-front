@@ -267,7 +267,7 @@ for service in "${services[@]}"; do
         echo -e "${GREEN}Service $service found. Starting...${NC}"
         # Start the specific service
         docker-compose up -d --build $service
-        sleep 5
+        sleep 20
     else
         echo -e "${RED}Service $service not found or directory is empty. Skipping...${NC}"
     fi
