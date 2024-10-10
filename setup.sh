@@ -49,8 +49,6 @@ else
     echo -e "${BLUE}Here is the SSH public key. Please add it to your GitLab account:${NC}"
     cat /home/$deploy_user/.ssh/id_rsa.pub
     echo -e "------------------------------------------------------------------------------"
-    echo -e "${BLUE}Here is the SSH Private key. Please add it to your Variable Ci Cd setting:${NC}"
-    cat /home/$deploy_user/.ssh/id_rsa
 fi
 
 echo -e "${BLUE}Starting SSH agent and adding the key...${NC}"
@@ -89,9 +87,6 @@ for project_name in "${!project_folders[@]}"; do
     folder_name=${project_folders[$project_name]}
     folder_path="$src_directory/$folder_name"
 
-    echo -e "-------------------------------${project_name}-------------------------------------"
-    echo -e "${BLUE}Here is the SSH Private key. Please add it to your Variable Ci Cd setting:${NC}"
-    cat /home/$deploy_user/.ssh/id_rsa
     read -p "Please enter your GitLab repository URL for $project_name (leave empty if you don't want to set this project): " repo_url
     if [[ -z "$repo_url" ]]; then
         echo -e "${YELLOW}Skipping setup for $project_name as no URL was provided.${NC}"
