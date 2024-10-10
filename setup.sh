@@ -276,6 +276,9 @@ done
 # Step 3: Final message after processing all services
 # Final message after processing all services
 echo -e "${GREEN}All available services have been started successfully.${NC}"
+
+# Wait for services to fully start
+echo -e "${BLUE}Waiting for services to be fully up...${NC}"
 sleep 10  # Wait for 10 seconds before proceeding with Nginx configuration
 
 # Nginx configuration file path
@@ -300,27 +303,26 @@ http {
 echo "$base_config" > "$nginx_config_host"
 
 # Function to check if a container is running
-function is_container_running() {
+is_container_running() {
     local service_name="$1"
     docker inspect -f '{{.State.Running}}' "$service_name" 2>/dev/null
 }
 
-# Function to get container IP address
-function get_container_ip() {
-    local service_name="$1"
-    docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$service_name" 2>/dev/null
-}
-
 # Function to check if a service is accessible
-function is_service_accessible() {
-    local container_ip="$1"
+is_service_accessible() {
+    local service_name="$1"
     local port="$2"
+
+    container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$service_name" 2>/dev/null)
+    if [ -z "$container_ip" ]; then
+        return 1
+    fi
 
     curl -s --head --request GET "http://$container_ip:$port/" | grep "200 OK" > /dev/null
 }
 
 # Function to add location block to Nginx config
-function add_nginx_location() {
+add_nginx_location() {
     local service_name="$1"
     local port="$2"
     local location="$3"
@@ -355,11 +357,8 @@ for service_name in "${!services_and_locations[@]}"; do
     if is_container_running "$service_name" | grep -q "true"; then
         echo -e "${GREEN}Checking ${service_name} availability...${NC}"
 
-        # Get container IP
-        container_ip=$(get_container_ip "$service_name")
-
-        # If container IP is found, check if the service is accessible
-        if [ -n "$container_ip" ] && is_service_accessible "$container_ip" "$port"; then
+        # Check if service is accessible
+        if is_service_accessible "$service_name" "$port"; then
             echo -e "${GREEN}Adding ${service_name} to Nginx config...${NC}"
             add_nginx_location "$service_name" "$port" "$location"
         else
