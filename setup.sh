@@ -179,7 +179,6 @@ if [ -f "/home/$deploy_user/.bash_logout" ]; then
     echo -e "${GREEN}.bash_logout file has been removed successfully.${NC}"
 fi
 
-
 # Step 8: Change SSH port to 23232 and configure UFW
 
 # Check if ufw is installed and install it if necessary
@@ -201,7 +200,7 @@ else
 fi
 
 # Open port 23232 in UFW first
-if sudo ufw status | grep -qw "23232"; then
+if sudo ufw status | grep -qw "23232 ALLOW"; then
     echo -e "${GREEN}Port 23232 is already allowed in UFW.${NC}"
 else
     echo -e "${BLUE}Allowing port 23232 in UFW for SSH...${NC}"
@@ -214,37 +213,47 @@ if grep -q "Port 23232" /etc/ssh/sshd_config; then
     echo -e "${GREEN}SSH port is already set to 23232. Skipping this step.${NC}"
 else
     echo -e "${BLUE}Changing SSH port to 23232...${NC}"
+
+    # Comment out any existing Port 22 line to avoid conflicts
     if grep -q "^Port 22" /etc/ssh/sshd_config; then
-        sudo sed -i 's/^Port 22/Port 23232/' /etc/ssh/sshd_config
-    else
-        echo "Port 23232" | sudo tee -a /etc/ssh/sshd_config
+        sudo sed -i 's/^Port 22/#Port 22/' /etc/ssh/sshd_config
     fi
+
+    # Add the new Port 23232 line
+    echo "Port 23232" | sudo tee -a /etc/ssh/sshd_config
+
     sudo service ssh restart
     echo -e "${GREEN}SSH port changed to 23232 and service restarted.${NC}"
 fi
 
-# Test SSH connection on port 23232
-echo -e "${BLUE}Testing SSH connection on port 23232...${NC}"
+# Test if port 23232 is listening using netcat
+echo -e "${BLUE}Testing if SSH is listening on port 23232...${NC}"
 server_ip=$(hostname -I | awk '{print $1}')
-ssh -p 23232 -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no $deploy_user@$server_ip exit
 
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}SSH connection on port 23232 successful!${NC}"
+if nc -zv $server_ip 23232; then
+    echo -e "${GREEN}Port 23232 is open and accepting connections.${NC}"
 
-    # Deny port 22 after confirming connection on port 23232
-    if sudo ufw status | grep -qw "22.*DENY"; then
-        echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
+    # Test actual SSH connection on port 23232
+    echo -e "${BLUE}Testing SSH connection on port 23232...${NC}"
+    if ssh -p 23232 -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no $deploy_user@$server_ip exit; then
+        echo -e "${GREEN}SSH connection on port 23232 successful!${NC}"
+
+        # Deny port 22 after confirming connection on port 23232
+        if sudo ufw status | grep -qw "22.*DENY"; then
+            echo -e "${GREEN}Port 22 is already denied in UFW.${NC}"
+        else
+            echo -e "${BLUE}Denying port 22 in UFW...${NC}"
+            sudo ufw deny 22
+            sudo ufw reload
+        fi
+
+        echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
     else
-        echo -e "${BLUE}Denying port 22 in UFW...${NC}"
-        sudo ufw deny 22
-        sudo ufw reload
+        echo -e "${RED}Failed to establish SSH connection on port 23232. Keeping port 22 open.${NC}"
     fi
-
-    echo -e "${GREEN}UFW configured: port 23232 allowed, port 22 denied.${NC}"
 else
-    echo -e "${RED}Failed to establish SSH connection on port 23232. Keeping port 22 open.${NC}"
+    echo -e "${RED}Port 23232 is not open. Please check your configuration.${NC}"
 fi
-
 
 
 echo -e "${BLUE}Starting Docker Compose based on existing projects...${NC}"
