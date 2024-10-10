@@ -372,17 +372,29 @@ declare -A services_and_locations=(
     ["onomis"]="3004:/onomis/"
 )
 
+# Function to check if a container is running using docker ps
+is_container_running() {
+    local service_name="$1"
+    echo -e "${BLUE}Checking if container $service_name is running...${NC}"
+    docker ps --format '{{.Names}}' | grep -q "$service_name"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Container $service_name is running.${NC}"
+        return 0
+    else
+        echo -e "${RED}Container $service_name is not running.${NC}"
+        return 1
+    fi
+}
+
 # Loop through each service and check its availability
 for service_name in "${!services_and_locations[@]}"; do
     port_and_location=(${services_and_locations[$service_name]//:/ }) # Split port and location
     port="${port_and_location[0]}"
     location="${port_and_location[1]}"
 
-    # Check if container is running
     if is_container_running "$service_name"; then
         echo -e "${GREEN}Checking ${service_name} availability...${NC}"
 
-        # Check if service is accessible
         if is_service_accessible "$service_name" "$port"; then
             echo -e "${GREEN}Service $service_name is accessible on port $port.${NC}"
             add_nginx_location "$service_name" "$port" "$location"
@@ -391,6 +403,7 @@ for service_name in "${!services_and_locations[@]}"; do
         fi
     fi
 done
+
 
 # Closing Nginx server block
 echo -e "${BLUE}Closing Nginx server block...${NC}"
