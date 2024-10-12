@@ -29,9 +29,6 @@ COPY ./../src/${FOLDER_NAME}/. .
 # Build the project
 RUN yarn docs:build
 
-# Build the project
-RUN yarn build
-
 # Expose the port the project will be served on
 EXPOSE ${PORT}
 
