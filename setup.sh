@@ -331,7 +331,7 @@ EOT
 declare -A services_and_ports=(
     ["onomis-react"]="3000:/preview/onomis-react/"
     ["onomis-vue"]="3001:/preview/onomis-vue/"
-    ["onomis-docs"]="3002:/preview/onomis-docs/"
+    ["onomis-docs"]="3002:/onomis-docs"
     ["emeax"]="3003:/"
     ["onomis"]="3004:/onomis/"
 )
