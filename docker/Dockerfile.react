@@ -19,12 +19,12 @@ RUN echo "Building folder: ${FOLDER_NAME}"
 RUN npm install -g yarn --force
 
 # Copy package.json and install dependencies
-COPY ./../src/${FOLDER_NAME}/package*.json ./
+COPY ./src/${FOLDER_NAME}/package*.json ./
 
 RUN yarn install
 
 # Copy the entire project folder to the container
-COPY ./../src/${FOLDER_NAME}/. .
+COPY ./src/${FOLDER_NAME}/. .
 
 # Build the project
 RUN yarn build
