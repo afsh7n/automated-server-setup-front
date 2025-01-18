@@ -1,0 +1,19 @@
+FROM nginx:alpine
+
+# تنظیم مخازن به یک نسخه پایدار
+RUN sed -i 's/v3.20/v3.16/g' /etc/apk/repositories
+
+# نصب gettext برای envsubst
+RUN apk add --no-cache gettext
+
+# کپی اسکریپت init.sh به کانتینر
+COPY ./../docker/init.sh /usr/local/bin/init.sh
+
+# کپی فایل nginx.conf تمپلیت به پوشه موقت
+COPY ./../docker/nginx.conf /tmp/nginx.conf.template
+
+# تغییر مجوز اجرایی برای اسکریپت
+RUN chmod +x /usr/local/bin/init.sh
+
+# تعریف CMD برای اجرای اسکریپت init.sh و سپس جایگذاری متغیرهای محیطی در nginx.conf و اجرای Nginx
+CMD ["/bin/sh", "-c", "/usr/local/bin/init.sh && envsubst '${SERVER_NAME}' < /tmp/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

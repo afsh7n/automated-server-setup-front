@@ -1,0 +1,110 @@
+services:
+  nginx:
+      build:
+        context: .
+        dockerfile: docker/Dockerfile.nginx
+      container_name: nginx
+      ports:
+        - "80:80"
+      volumes:
+        - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      environment:
+        - SERVER_NAME=${SERVER_NAME}
+      networks:
+        - frontend_network
+      restart: always
+
+
+  onomis-react:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.react
+      args:
+        FOLDER_NAME: onomis-react
+        PORT: 3000
+    container_name: onomis-react
+    ports:
+      - "3000:3000"
+    networks:
+      - frontend_network
+
+  onomis-vue:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.vue
+      args:
+        FOLDER_NAME: onomis-vue
+        PORT: 3001
+    container_name: onomis-vue
+    ports:
+      - "3001:3001"
+    networks:
+      - frontend_network
+
+  onomis-docs:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.docs
+      args:
+        FOLDER_NAME: onomis-docs
+        PORT: 3002
+    container_name: onomis-docs
+    ports:
+      - "3002:3002"
+    networks:
+      - frontend_network
+
+  emeax:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.javascript
+      args:
+        FOLDER_NAME: emeax
+        PORT: 3003
+    container_name: emeax
+    ports:
+      - "3003:3003"
+    networks:
+      - frontend_network
+
+  onomis:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.javascript
+      args:
+        FOLDER_NAME: onomis
+        PORT: 3004
+    container_name: onomis
+    ports:
+      - "3004:3004"
+    networks:
+      - frontend_network
+
+  admin:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.vue
+      args:
+        FOLDER_NAME: admin
+        PORT: 3005
+    container_name: admin
+    ports:
+      - "3005:3005"
+    networks:
+      - frontend_network
+
+  admin-docs:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.docs
+      args:
+        FOLDER_NAME: admin-docs
+        PORT: 3006
+    container_name: admin-docs
+    ports:
+      - "3006:3006"
+    networks:
+      - frontend_network
+networks:
+  frontend_network:
+    driver: bridge

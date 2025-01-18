@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/emeax" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/onomis" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/onomis-docs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/onomis-react" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/onomis-vue" vcs="Git" />
+  </component>
+</project>
