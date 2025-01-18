@@ -7,10 +7,10 @@ RUN sed -i 's/v3.20/v3.16/g' /etc/apk/repositories
 RUN apk add --no-cache gettext
 
 # کپی اسکریپت init.sh به کانتینر
-COPY ./../docker/init.sh /usr/local/bin/init.sh
+COPY ./docker/init.sh /usr/local/bin/init.sh
 
 # کپی فایل nginx.conf تمپلیت به پوشه موقت
-COPY ./../docker/nginx.conf /tmp/nginx.conf.template
+COPY ./docker/nginx.conf /tmp/nginx.conf.template
 
 # تغییر مجوز اجرایی برای اسکریپت
 RUN chmod +x /usr/local/bin/init.sh
