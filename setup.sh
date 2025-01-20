@@ -15,7 +15,7 @@ if [ -d "$project_directory" ]; then
     echo -e "${GREEN}Project structure already exists. Pulling the latest changes.${NC}"
     cd $project_directory && sudo -u $deploy_user git pull
 else
-    git clone --single-branch --branch demo $project_structure_url $project_directory
+    git clone $project_structure_url $project_directory
     cd $project_directory
 fi
 
